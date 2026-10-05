@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Phase 3 PoC: Student Learning Monitoring Telemetry</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Student Learning Monitoring — Telemetry PoC</h1>
+      <p class="subtitle">Validating Phase 1 Rules & Phase 2 Architecture in real-time</p>
+    </header>
+
+    <div class="grid">
+      <!-- Live Status Card -->
+      <div class="card">
+        <div class="card-title">Current Live Status</div>
+        <div id="statusBadge" class="status-badge ACTIVE">
+          <span id="statusIcon">🟢</span>
+          <span id="statusText">ACTIVE</span>
+        </div>
+        <p class="metric-sub" id="statusReason" style="margin-top: 0.75rem;">Waiting for events...</p>
+
+        <div style="margin-top: 1.5rem;">
+          <div class="card-title">Companion Extension</div>
+          <div id="extBadge" style="font-weight: 600; color: #94a3b8;">
+            ⚪ Not Detected (Optional)
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Timers & Activity Card -->
+      <div class="card">
+        <div class="card-title">Live Timers & Thresholds</div>
+        <div>
+          <div class="metric-sub">Time until IDLE (5m window):</div>
+          <div class="metric-value" id="idleCountdown">05:00</div>
+        </div>
+
+        <div style="margin-top: 1rem;">
+          <div class="metric-sub">Last User Input:</div>
+          <div style="font-size: 1rem; font-weight: 600;" id="lastInputTime">Just now</div>
+        </div>
+
+        <div class="controls">
+          <button id="btnFastIdle" class="secondary" title="Reduces idle timeout to 10 seconds for rapid testing">
+            ⚡ Test 10s Fast Idle
+          </button>
+        </div>
+      </div>
+
+      <!-- Camera Hardware State Card -->
+      <div class="card">
+        <div class="card-title">Camera Hardware State (No Face AI)</div>
+        <div id="cameraStatusText" style="font-size: 1.25rem; font-weight: 700; color: #94a3b8;">
+          🚫 Camera OFF
+        </div>
+        <p class="metric-sub" style="margin-top: 0.25rem;">
+          Only detects hardware live/enabled track status. No video is processed or recorded.
+        </p>
+
+        <div class="controls">
+          <button id="btnStartCamera">Request Camera</button>
+          <button id="btnToggleCamera" class="secondary" disabled>Toggle ON / OFF</button>
+        </div>
+
+        <div class="video-container" id="videoBox">
+          <video id="webcamPreview" autoplay playsinline muted></video>
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Telemetry Rules & Instructions -->
+    <div class="card" style="margin-bottom: 1.5rem;">
+      <div class="card-title">Phase 1 Telemetry Rules Under Test</div>
+      <ul class="rules-list">
+        <li>👉 <strong>Tab Hidden (> 5s):</strong> Switch to another browser tab or minimize. If away for > 5 seconds, status turns 🟠 <code>TAB_AWAY</code>.</li>
+        <li>👉 <strong>Window Blurred (> 10s):</strong> Click onto another application or secondary monitor. If away for > 10 seconds, status turns 🔴 <code>WINDOW_UNFOCUSED</code>.</li>
+        <li>👉 <strong>Idle Timeout (5 mins):</strong> Stop moving mouse or typing. Inactivity timer transitions to 🟡 <code>IDLE</code>.</li>
+        <li>👉 <strong>Camera Hardware State:</strong> Tests whether camera track is active, without any facial recognition.</li>
+      </ul>
+    </div>
+
+    <!-- Live Telemetry Event Log -->
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+        <div class="card-title" style="margin-bottom: 0;">Live Audit Event Log</div>
+        <button id="btnClearLogs" class="secondary" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;">Clear Log</button>
+      </div>
+      <div class="log-panel" id="logPanel"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { StudentTelemetryTracker } from './student-tracker.js';
+
+    const statusBadge = document.getElementById('statusBadge');
+    const statusIcon = document.getElementById('statusIcon');
+    const statusText = document.getElementById('statusText');
+    const statusReason = document.getElementById('statusReason');
+    const extBadge = document.getElementById('extBadge');
+    const idleCountdown = document.getElementById('idleCountdown');
+    const lastInputTime = document.getElementById('lastInputTime');
+    const cameraStatusText = document.getElementById('cameraStatusText');
+    const logPanel = document.getElementById('logPanel');
+    const videoBox = document.getElementById('videoBox');
+    const webcamPreview = document.getElementById('webcamPreview');
+    const btnStartCamera = document.getElementById('btnStartCamera');
+    const btnToggleCamera = document.getElementById('btnToggleCamera');
+    const btnFastIdle = document.getElementById('btnFastIdle');
+    const btnClearLogs = document.getElementById('btnClearLogs');
+
+    let isFastIdle = false;
+
+    // Helper to log in UI
+    function appendLog(message, type = 'info') {
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      const now = new Date().toLocaleTimeString();
+      entry.innerHTML = `<span class="timestamp">[${now}]</span> ${message}`;
+      logPanel.prepend(entry);
+    }
+
+    // Initialize tracker
+    const tracker = new StudentTelemetryTracker({
+      idleTimeoutMs: 300000, // 5 min
+      tabGraceMs: 5000,      // 5 sec
+      windowGraceMs: 10000,  // 10 sec
+      onStatusChange: (newStatus, prevStatus, details) => {
+        statusBadge.className = `status-badge ${newStatus}`;
+        statusText.textContent = newStatus;
+        statusReason.textContent = details.reason || 'Status update';
+
+        if (newStatus === 'ACTIVE') statusIcon.textContent = '🟢';
+        else if (newStatus === 'IDLE') statusIcon.textContent = '🟡';
+        else if (newStatus === 'TAB_AWAY') statusIcon.textContent = '🟠';
+        else if (newStatus === 'WINDOW_UNFOCUSED') statusIcon.textContent = '🔴';
+      },
+      onCameraChange: (isOn) => {
+        if (isOn) {
+          cameraStatusText.textContent = '📹 Camera ON';
+          cameraStatusText.style.color = '#10b981';
+          btnToggleCamera.textContent = 'Turn Camera OFF';
+        } else {
+          cameraStatusText.textContent = '🚫 Camera OFF';
+          cameraStatusText.style.color = '#94a3b8';
+          btnToggleCamera.textContent = 'Turn Camera ON';
+        }
+      },
+      onExtensionDetected: (data) => {
+        extBadge.innerHTML = `🟢 Verified (v${data.version || '1.0.0'})`;
+        extBadge.style.color = '#10b981';
+      },
+      onLog: (msg, type) => appendLog(msg, type)
+    });
+
+    tracker.start();
+
+    // Fast idle toggle for quick testing
+    btnFastIdle.addEventListener('click', () => {
+      isFastIdle = !isFastIdle;
+      tracker.options.idleTimeoutMs = isFastIdle ? 10000 : 300000;
+      tracker._resetIdleTimer();
+      btnFastIdle.textContent = isFastIdle ? '🔄 Reset to 5m Normal Idle' : '⚡ Test 10s Fast Idle';
+      appendLog(`Idle timeout configured to ${tracker.options.idleTimeoutMs / 1000} seconds`, 'warn');
+    });
+
+    // Camera controls
+    btnStartCamera.addEventListener('click', async () => {
+      const stream = await tracker.requestCamera();
+      if (stream) {
+        webcamPreview.srcObject = stream;
+        videoBox.style.display = 'block';
+        btnStartCamera.style.display = 'none';
+        btnToggleCamera.disabled = false;
+      }
+    });
+
+    btnToggleCamera.addEventListener('click', () => {
+      tracker.toggleCamera();
+    });
+
+    btnClearLogs.addEventListener('click', () => {
+      logPanel.innerHTML = '';
+    });
+
+    // UI Tick for countdown timer
+    setInterval(() => {
+      const elapsed = Date.now() - tracker.lastInputTimestamp;
+      const remaining = Math.max(0, tracker.options.idleTimeoutMs - elapsed);
+      const minutes = Math.floor(remaining / 60000);
+      const seconds = Math.floor((remaining % 60000) / 1000);
+      idleCountdown.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+      const secAgo = Math.floor(elapsed / 1000);
+      lastInputTime.textContent = secAgo === 0 ? 'Just now' : `${secAgo}s ago`;
+    }, 500);
+  </script>
+</body>
+</html>
+
