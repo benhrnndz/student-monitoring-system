@@ -132,10 +132,12 @@ student-monitoring-system/
 │   │   ├── auth_utils.py           # Password hashing & JWT helpers
 │   │   └── routers/
 │   │       ├── ws.py               # WebSocket telemetry streaming route
-│   │       ├── sessions.py         # Session management & report generator
+│   │       ├── sessions.py         # Session management, CSV & Excel exports
 │   │       ├── classrooms.py       # Classroom management & join codes
 │   │       └── auth.py             # User registration & authentication
-│   ├── requirements.txt            # Python dependencies
+│   ├── Dockerfile                  # Production Python 3.11 container image
+│   ├── .dockerignore
+│   ├── requirements.txt            # Python dependencies (openpyxl, fastapi, etc.)
 │   └── run.py                      # Backend launcher
 ├── frontend/
 │   ├── src/
@@ -143,25 +145,32 @@ student-monitoring-system/
 │   │   │   ├── page.tsx            # Main landing page
 │   │   │   ├── teacher/page.tsx    # Teacher Live Monitoring Dashboard
 │   │   │   ├── classroom/[sessionId]/page.tsx # Student Classroom Portal
-│   │   │   └── report/[sessionId]/page.tsx    # Attendance & Engagement Report
+│   │   │   └── report/[sessionId]/page.tsx    # Attendance & CSV/Excel Exports
 │   │   └── lib/
 │   │       ├── telemetry.ts        # Client-side telemetry engine
 │   │       └── api.ts              # API & WebSocket client
+│   ├── Dockerfile                  # Multi-stage Next.js 16 standalone build
+│   ├── .dockerignore
+│   ├── next.config.ts              # Standalone production configuration
 │   └── package.json
+├── nginx/
+│   └── default.conf                # Unified reverse proxy (port 80) configuration
 ├── extension/                      # Manifest V3 companion extension
 │   ├── manifest.json
 │   ├── background.js               # Service worker for cross-tab tracking
 │   ├── bridge.js                   # Content script DOM bridge
 │   └── popup.html                  # Extension popup UI
-├── poc/                            # Phase 3 standalone visual test harness
+├── scripts/
+│   └── simulate_classroom.py       # Multi-student classroom simulator
 ├── tests/
-│   └── test_e2e_ws.py              # Automated WebSocket integration test
-├── docs/                           # Comprehensive phase specification files
-│   ├── PHASE_1_SPECIFICATION.md
-│   ├── PHASE_2_ARCHITECTURE.md
-│   ├── PHASE_3_POC_VALIDATION.md
-│   └── PHASE_4_MVP_DELIVERY.md
-├── run-system.bat                  # One-click Windows launcher
+│   ├── test_e2e_ws.py              # E2E WebSocket & Batch Nudge integration test
+│   └── test_exports.py             # CSV and Excel export integration test
+├── docker-compose.yml              # Multi-container orchestration (Backend + Frontend)
+├── .env.example                    # Environment variable configuration template
+├── run-docker.bat                  # One-click Windows Docker launcher
+├── run-docker.sh                   # Linux/macOS Docker launcher
+├── run-simulator.bat               # One-click classroom simulator launcher
+├── run-system.bat                  # One-click native Windows launcher
 └── README.md
 ```
 
@@ -215,6 +224,56 @@ npm install
 npm run dev
 ```
 * Web Application: `http://localhost:3000`
+
+---
+
+### Option C: Docker Containerization (Production / Multi-Platform)
+
+Deploy the full stack as isolated production containers with automatic health checks, multi-stage standalone Next.js builds, and persistent database volumes.
+
+#### 1. One-Click Docker Launch
+* **Windows:**
+  ```powershell
+  .\run-docker.bat
+  ```
+* **Linux / macOS:**
+  ```bash
+  chmod +x run-docker.sh && ./run-docker.sh
+  ```
+
+#### 2. Manual Docker Compose Commands
+```bash
+# Copy environment configuration
+cp .env.example .env
+
+# Build and start all services in detached mode
+docker compose up --build -d
+
+# Check running container status and health checks
+docker compose ps
+
+# View live aggregate logs
+docker compose logs -f
+```
+
+#### 3. Advanced Docker Profiles
+
+* **With PostgreSQL Container (instead of SQLite):**
+  ```bash
+  docker compose --profile postgres up --build -d
+  ```
+  *(Launches a persistent PostgreSQL 16 container and automatically links the FastAPI backend)*
+
+* **With Nginx Reverse Proxy (Unified Port 80):**
+  ```bash
+  docker compose --profile proxy up --build -d
+  ```
+  *(Exposes both Frontend and Backend on `http://localhost` without cross-origin or port differences)*
+
+* **Stop Containers:**
+  ```bash
+  docker compose down
+  ```
 
 ---
 
