@@ -1,5 +1,6 @@
 import json
 import logging
+import time
 from datetime import datetime, timezone
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
 from ..websocket_manager import ws_manager
@@ -35,6 +36,16 @@ async def session_websocket_endpoint(
                         target_student_id = payload.get("studentId")
                         message = payload.get("message", "Your instructor is checking on your engagement.")
                         await ws_manager.nudge_student(session_id, target_student_id, message)
+                    
+                    elif event == "teacher:nudge_all":
+                        message = payload.get("message", "Your instructor noticed multiple students stepped away. Please refocus on class!")
+                        nudged_count = await ws_manager.nudge_all_inattentive(session_id, message)
+                        await websocket.send_text(json.dumps({
+                            "event": "teacher:nudge_all_ack",
+                            "sessionId": session_id,
+                            "timestamp": int(datetime.now(timezone.utc).timestamp() * 1000),
+                            "payload": { "nudgedCount": nudged_count }
+                        }))
                 except Exception as e:
                     logger.error(f"Error handling teacher message: {e}")
         else:
@@ -104,6 +115,39 @@ async def session_websocket_endpoint(
                 logger.error(f"DB attendance setup error (continuing in real-time mode): {db_err}")
                 db.rollback()
 
+            # Accurate state duration tracking variables
+            last_activity_time = time.time()
+            current_tracked_status = "ACTIVE"
+
+            def accumulate_elapsed(next_status=None):
+                nonlocal last_activity_time, current_tracked_status
+                now = time.time()
+                delta = max(0, int(now - last_activity_time))
+                if delta > 0 and attendance_record:
+                    if current_tracked_status == "ACTIVE":
+                        attendance_record.total_active_seconds += delta
+                    elif current_tracked_status == "IDLE":
+                        attendance_record.total_idle_seconds += delta
+                    elif current_tracked_status == "TAB_AWAY":
+                        attendance_record.total_tab_away_seconds += delta
+                    elif current_tracked_status == "WINDOW_UNFOCUSED":
+                        attendance_record.total_window_away_seconds += delta
+
+                    # Dynamically calculate engagement score (Active counts 100%, Idle counts 20%, Away counts 0%)
+                    total_tracked = (
+                        attendance_record.total_active_seconds +
+                        attendance_record.total_idle_seconds +
+                        attendance_record.total_tab_away_seconds +
+                        attendance_record.total_window_away_seconds
+                    )
+                    if total_tracked > 0:
+                        score = ((attendance_record.total_active_seconds + 0.2 * attendance_record.total_idle_seconds) / total_tracked) * 100.0
+                        attendance_record.engagement_score = round(max(0.0, min(100.0, score)), 1)
+
+                last_activity_time = now
+                if next_status:
+                    current_tracked_status = next_status
+
             # 3. Message loop
             while True:
                 data_text = await websocket.receive_text()
@@ -115,7 +159,7 @@ async def session_websocket_endpoint(
                     if event == "telemetry:status_change":
                         await ws_manager.update_student_status(session_id, user_id, payload)
                         
-                        # Persist event in DB safely
+                        # Persist event and accumulate actual elapsed duration
                         try:
                             new_status = payload.get("newStatus")
                             if attendance_record and new_status:
@@ -126,14 +170,7 @@ async def session_websocket_endpoint(
                                     metadata_json=json.dumps(payload)
                                 )
                                 db.add(evt)
-                                
-                                if new_status == "TAB_AWAY":
-                                    attendance_record.total_tab_away_seconds += 5
-                                elif new_status == "WINDOW_UNFOCUSED":
-                                    attendance_record.total_window_away_seconds += 10
-                                elif new_status == "IDLE":
-                                    attendance_record.total_idle_seconds += 300
-
+                                accumulate_elapsed(next_status=new_status)
                                 db.commit()
                         except Exception as log_err:
                             logger.error(f"Failed to persist event log: {log_err}")
@@ -142,15 +179,17 @@ async def session_websocket_endpoint(
                     elif event == "telemetry:camera_toggle":
                         camera_on = payload.get("cameraOn", False)
                         await ws_manager.update_student_camera(session_id, user_id, camera_on)
+
+                    elif event == "telemetry:heartbeat":
                         try:
-                            if attendance_record and camera_on:
-                                attendance_record.camera_on_seconds += 15
+                            if attendance_record:
+                                accumulate_elapsed()
+                                if payload.get("cameraOn"):
+                                    attendance_record.camera_on_seconds += 15
                                 db.commit()
                         except Exception:
                             db.rollback()
 
-                    elif event == "telemetry:heartbeat":
-                        pass
                 except Exception as loop_err:
                     logger.error(f"Error handling student message: {loop_err}")
 
@@ -162,6 +201,7 @@ async def session_websocket_endpoint(
             await ws_manager.disconnect_student(session_id, user_id)
             if attendance_record:
                 try:
+                    accumulate_elapsed()
                     attendance_record.last_left_at = datetime.now(timezone.utc)
                     db.commit()
                 except Exception:
