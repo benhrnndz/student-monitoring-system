@@ -26,6 +26,8 @@ class WebSocketRoomManager:
             "currentStatus": s.get("currentStatus", "ACTIVE"),
             "cameraOn": bool(s.get("cameraOn", False)),
             "extensionActive": bool(s.get("extensionActive", False)),
+            "platform": s.get("platform", "WEB"),
+            "source": s.get("source", "WEB"),
             "tabAwayCount": int(s.get("tabAwayCount", 0)),
             "windowBlurCount": int(s.get("windowBlurCount", 0)),
             "lastActiveAt": s.get("lastActiveAt", 0)
@@ -50,13 +52,16 @@ class WebSocketRoomManager:
         await websocket.accept()
         self._ensure_room(session_id)
         
+        platform = student_info.get("platform") or ("GOOGLE_MEET" if "MEET" in student_info.get("source", "").upper() else "WEB")
         self.rooms[session_id]["students"][student_id] = {
             "ws": websocket,
             "studentId": student_id,
             "name": student_info.get("name", "Student"),
             "currentStatus": "ACTIVE",
             "cameraOn": student_info.get("cameraOn", False),
-            "extensionActive": student_info.get("extensionInstalled", False),
+            "extensionActive": bool(student_info.get("extensionInstalled", False) or platform == "GOOGLE_MEET"),
+            "platform": platform,
+            "source": student_info.get("source", platform),
             "tabAwayCount": 0,
             "windowBlurCount": 0,
             "lastActiveAt": int(datetime.now(timezone.utc).timestamp() * 1000)
@@ -105,6 +110,12 @@ class WebSocketRoomManager:
 
             if "cameraOn" in status_payload:
                 student["cameraOn"] = status_payload["cameraOn"]
+
+            if "source" in status_payload:
+                student["source"] = status_payload["source"]
+                if "MEET" in str(status_payload["source"]).upper():
+                    student["platform"] = "GOOGLE_MEET"
+                    student["extensionActive"] = True
 
             # Broadcast update to teachers
             clean_student = self._serialize_student(student)
@@ -168,6 +179,7 @@ class WebSocketRoomManager:
                 "idleCount": 0,
                 "awayCount": 0,
                 "cameraOnCount": 0,
+                "googleMeetCount": 0,
                 "totalEnrolled": 0,
                 "students": []
             }
@@ -178,6 +190,7 @@ class WebSocketRoomManager:
         idle_count = 0
         away_count = 0
         cam_count = 0
+        meet_count = 0
 
         for s in students:
             status = s["currentStatus"]
@@ -191,6 +204,9 @@ class WebSocketRoomManager:
             if s.get("cameraOn"):
                 cam_count += 1
 
+            if s.get("platform") == "GOOGLE_MEET" or "MEET" in str(s.get("source", "")).upper():
+                meet_count += 1
+
             clean_students.append(self._serialize_student(s))
 
         return {
@@ -198,6 +214,7 @@ class WebSocketRoomManager:
             "idleCount": idle_count,
             "awayCount": away_count,
             "cameraOnCount": cam_count,
+            "googleMeetCount": meet_count,
             "totalEnrolled": len(students),
             "students": clean_students
         }
