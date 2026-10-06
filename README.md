@@ -42,8 +42,9 @@ A **privacy-first, real-time learning telemetry system** for online classrooms t
 * **🛡️ Non-Intrusive Inactivity Tracking:** Detects active participation using debounced mouse, keyboard, touch, and scroll interactions with a 5-minute threshold.
 * **🌐 Tab & External Browser Detection:** Detects when students navigate to other browser tabs or switch to external applications using HTML5 Page Visibility APIs and an optional Manifest V3 companion extension.
 * **📹 Hardware Camera State Visibility:** Reflects whether a student's webcam is turned ON or OFF by inspecting hardware media track states—**zero video frames are recorded or processed**.
-* **🔔 Live Focus Pings / Nudges:** Teachers can send gentle focus check-in prompts directly to distracted students with one click.
-* **📊 Post-Session Attendance & Analytics:** Automatically records active vs. idle vs. away durations and calculates an overall student engagement score.
+* **🔔 Live Focus Pings / Batch Nudge:** Teachers can send individual focus check-ins or click **Ping All Inattentive** to alert all distracted students at once.
+* **📊 Post-Session Attendance & Analytics:** Automatically records exact active vs. idle vs. away durations and dynamically calculates student engagement scores.
+* **📑 One-Click CSV & Formatted Excel (.xlsx) Export:** Download detailed session reports complete with classroom metadata, KPI summaries, exact attendance metrics, and color-coded engagement badges.
 
 ---
 
@@ -103,6 +104,7 @@ flowchart TD
 * **Language & Framework:** Python 3.10+ / FastAPI
 * **Real-Time Communication:** Native Async WebSockets (`websockets`)
 * **Database & ORM:** SQLAlchemy with SQLite (default local) and PostgreSQL compatibility
+* **Spreadsheet Reporting:** `openpyxl` (styled `.xlsx`) and RFC 4180 UTF-8 BOM CSV exports
 * **Security & Auth:** JWT tokens (`python-jose`) and salted hashing
 
 ### Frontend
@@ -238,7 +240,7 @@ npm run dev
 6. **Test Fast Idle (10s):** On the student page, click **"⚡ Test 10s Fast Idle"** and stop interacting. In 10 seconds, status transitions to 🟡 **IDLE**. Moving the mouse immediately restores 🟢 **ACTIVE**.
 7. **Test Camera Toggle:** Click **"Turn Camera ON"** on the student page; the teacher dashboard badge instantly updates to 📹 **Cam ON**.
 8. **Test Instructor Nudge:** On the teacher dashboard, click **"Ping Student"**. A focus check-in modal appears on the student's screen with an acknowledgement button.
-9. **Test Session Report:** Click **"End Session & View Report"** to view aggregated attendance, time spent active/away, and final engagement scores.
+9. **Test Session Report & Spreadsheet Exports:** Click **"End Session & View Report"** to view aggregated attendance, time spent active/away, and final engagement scores. Click **"Export CSV"** or **"Export Excel (.xlsx)"** to download full class reports with styled tables and KPI metrics.
 
 ---
 
