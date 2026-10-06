@@ -159,6 +159,25 @@ export default function TeacherDashboardPage() {
     }
   }
 
+  function handlePingAllInattentive() {
+    const inattentiveCount = idleCount + awayCount;
+    if (inattentiveCount === 0) return;
+
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(
+        JSON.stringify({
+          event: "teacher:nudge_all",
+          payload: {
+            message: "Your instructor noticed multiple students stepped away. Please refocus on class!",
+          },
+        })
+      );
+      setNudgeFeedback(`Sent focus alert to all ${inattentiveCount} inattentive students!`);
+      setTimeout(() => setNudgeFeedback(null), 3500);
+      addLog("Teacher", `Broadcasted focus alert to all ${inattentiveCount} inattentive students`, "warn");
+    }
+  }
+
   async function handleEndSession() {
     if (!sessionId) return;
     if (confirm("Are you sure you want to conclude this live session and view the attendance report?")) {
@@ -304,15 +323,28 @@ export default function TeacherDashboardPage() {
               </button>
             </div>
 
-            <div className="relative">
-              <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
-              <input
-                type="text"
-                placeholder="Search student..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="bg-slate-900 border border-slate-800 rounded-lg pl-9 pr-4 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500 w-48"
-              />
+            <div className="flex items-center gap-3">
+              {idleCount + awayCount > 0 && (
+                <button
+                  onClick={handlePingAllInattentive}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 transition shadow-sm animate-pulse"
+                  title="Send a focus check-in alert to all students who are currently Idle or Away"
+                >
+                  <Bell className="w-3.5 h-3.5" />
+                  Ping All Inattentive ({idleCount + awayCount})
+                </button>
+              )}
+
+              <div className="relative">
+                <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
+                <input
+                  type="text"
+                  placeholder="Search student..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="bg-slate-900 border border-slate-800 rounded-lg pl-9 pr-4 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500 w-48"
+                />
+              </div>
             </div>
           </div>
 
