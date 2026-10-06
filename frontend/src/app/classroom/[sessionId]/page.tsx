@@ -81,6 +81,18 @@ export default function StudentClassroomPage({ params }: { params: Promise<{ ses
           },
         })
       );
+
+      // Broadcast session details to extension for Google Meet cross-tab tracking
+      window.postMessage(
+        {
+          type: "CLASSROOM_SESSION_SYNC",
+          sessionId: actualSessionId,
+          studentId,
+          studentName,
+          wsUrl: WS_BASE,
+        },
+        "*"
+      );
     };
 
     ws.onclose = () => {
@@ -329,6 +341,29 @@ export default function StudentClassroomPage({ params }: { params: Promise<{ ses
 
         {/* Right Sidebar: Camera Preview & Identity Switcher */}
         <div className="w-full lg:w-80 flex flex-col gap-4">
+          {/* Google Meet Mode Card */}
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
+            <div className="flex items-center justify-between text-xs font-semibold uppercase text-slate-400 mb-2">
+              <span className="flex items-center gap-1.5">
+                <Video className="w-3.5 h-3.5 text-blue-400" />
+                Google Meet Mode
+              </span>
+              <span className="text-emerald-400 font-mono text-[11px]">Ready 🟢</span>
+            </div>
+            <p className="text-xs text-slate-300 leading-relaxed mb-3">
+              Attending lecture on Google Meet? Open your call tab and our Companion Extension will track your attentiveness, camera state, and focus alerts directly inside Meet.
+            </p>
+            <a
+              href="https://meet.google.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white transition shadow-sm"
+            >
+              <Video className="w-3.5 h-3.5" />
+              <span>Launch Google Meet Call ↗</span>
+            </a>
+          </div>
+
           {/* Camera Card */}
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
             <div className="flex items-center justify-between text-xs font-semibold uppercase text-slate-400 mb-3">
