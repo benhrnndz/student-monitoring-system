@@ -143,6 +143,24 @@ class WebSocketRoomManager:
             except Exception:
                 pass
 
+    async def nudge_all_inattentive(self, session_id: str, message: str) -> int:
+        """Pings all students who are currently IDLE, TAB_AWAY, or WINDOW_UNFOCUSED."""
+        count = 0
+        if session_id in self.rooms:
+            for student_id, student in list(self.rooms[session_id]["students"].items()):
+                if student.get("currentStatus") in ("IDLE", "TAB_AWAY", "WINDOW_UNFOCUSED"):
+                    try:
+                        await student["ws"].send_text(json.dumps({
+                            "event": "student:nudge",
+                            "sessionId": session_id,
+                            "timestamp": int(datetime.now(timezone.utc).timestamp() * 1000),
+                            "payload": { "message": message }
+                        }))
+                        count += 1
+                    except Exception as e:
+                        logger.error(f"Error nudging student {student_id}: {e}")
+        return count
+
     def get_roster_snapshot(self, session_id: str) -> dict:
         if session_id not in self.rooms:
             return {
