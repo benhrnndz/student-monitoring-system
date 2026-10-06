@@ -1,0 +1,87 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: student-monitor-backend
+    restart: unless-stopped
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    environment:
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///./data/learning_monitor.db}
+      - SECRET_KEY=${SECRET_KEY:-super-secret-learning-monitoring-key-2026}
+      - CORS_ORIGINS=["http://localhost:3000","http://127.0.0.1:3000","http://localhost:80","http://localhost","*"]
+    volumes:
+      - backend_data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - student_monitor_net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000/api}
+        - NEXT_PUBLIC_WS_URL=${NEXT_PUBLIC_WS_URL:-ws://localhost:8000/ws/session}
+    container_name: student-monitor-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - student_monitor_net
+
+  # Optional PostgreSQL Database (Activate with: docker compose --profile postgres up)
+  db:
+    image: postgres:16-alpine
+    container_name: student-monitor-db
+    restart: unless-stopped
+    profiles:
+      - postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-learning_monitor}
+      POSTGRES_USER: ${POSTGRES_USER:-monitor_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-monitor_secret_2026}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-monitor_user} -d ${POSTGRES_DB:-learning_monitor}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - student_monitor_net
+
+  # Optional Nginx Reverse Proxy (Activate with: docker compose --profile proxy up)
+  nginx:
+    image: nginx:alpine
+    container_name: student-monitor-proxy
+    restart: unless-stopped
+    profiles:
+      - proxy
+    ports:
+      - "${PROXY_PORT:-80}:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - student_monitor_net
+
+volumes:
+  backend_data:
+  postgres_data:
+
+networks:
+  student_monitor_net:
+    driver: bridge
+
