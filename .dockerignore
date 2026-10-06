@@ -1,0 +1,15 @@
+.git
+.gitignore
+.venv
+venv
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/*.pyd
+**/*.db
+**/*.sqlite3
+**/node_modules
+**/.next
+learning_monitor.db
+docs/
+poc/
