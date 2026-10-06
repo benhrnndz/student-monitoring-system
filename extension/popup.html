@@ -2,46 +2,183 @@
 <html>
 <head>
   <meta charset="utf-8" />
+  <title>Student Learning Companion</title>
   <style>
     body {
-      width: 250px;
+      width: 320px;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      padding: 12px;
+      padding: 16px;
       margin: 0;
       background: #0f172a;
       color: #f8fafc;
+      box-sizing: border-box;
     }
-    h3 {
-      margin: 0 0 8px 0;
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #1e293b;
+    }
+    .title {
       font-size: 14px;
+      font-weight: 700;
       color: #38bdf8;
-    }
-    p {
-      font-size: 12px;
-      color: #94a3b8;
-      margin: 0 0 10px 0;
-      line-height: 1.4;
-    }
-    .status {
-      display: inline-flex;
+      display: flex;
       align-items: center;
       gap: 6px;
+    }
+    .version {
+      font-size: 10px;
+      color: #64748b;
+      font-mono;
+    }
+    .status-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 12px;
+    }
+    .status-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+    .status-row:last-child {
+      margin-bottom: 0;
+    }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-weight: 600;
+      font-size: 11px;
+      color: #10b981;
+      background: rgba(16, 185, 129, 0.15);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .field {
+      margin-bottom: 10px;
+    }
+    .label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      color: #94a3b8;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    input {
+      width: 100%;
+      background: #020617;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 12px;
+      color: #f8fafc;
+      box-sizing: border-box;
+      outline: none;
+    }
+    input:focus {
+      border-color: #38bdf8;
+    }
+    .btn {
+      width: 100%;
+      background: #2563eb;
+      color: #ffffff;
+      border: none;
+      border-radius: 6px;
+      padding: 8px;
       font-size: 12px;
       font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-top: 4px;
+    }
+    .btn:hover {
+      background: #1d4ed8;
+    }
+    .btn-secondary {
+      background: #1e293b;
+      color: #cbd5e1;
+      border: 1px solid #334155;
+      margin-top: 6px;
+    }
+    .btn-secondary:hover {
+      background: #334155;
+      color: #ffffff;
+    }
+    .footer {
+      margin-top: 12px;
+      font-size: 10px;
+      color: #64748b;
+      text-align: center;
+      line-height: 1.4;
+    }
+    .toast {
+      display: none;
+      font-size: 11px;
       color: #10b981;
-      background: rgba(16, 185, 129, 0.1);
-      padding: 4px 8px;
-      border-radius: 4px;
-      border: 1px solid #10b981;
+      text-align: center;
+      margin-top: 6px;
     }
   </style>
 </head>
 <body>
-  <h3>Learning Companion</h3>
-  <p>Monitors classroom tab focus to help keep you engaged during live online lectures.</p>
-  <div class="status">
-    <span>🟢</span> Active & Monitoring
+  <div class="header">
+    <div class="title">
+      <span>🛡️</span>
+      <span>Learning Companion</span>
+    </div>
+    <span class="version">v1.2.0</span>
   </div>
+
+  <div class="status-card">
+    <div class="status-row">
+      <span style="color: #94a3b8;">Focus Telemetry:</span>
+      <span class="status-badge" id="hud-status">🟢 Active</span>
+    </div>
+    <div class="status-row">
+      <span style="color: #94a3b8;">Google Meet Hook:</span>
+      <span style="color: #38bdf8; font-weight: 600; font-size: 11px;" id="meet-status">Ready</span>
+    </div>
+    <div class="status-row">
+      <span style="color: #94a3b8;">Server Feed:</span>
+      <span style="color: #94a3b8; font-size: 11px;" id="ws-status">Connected</span>
+    </div>
+  </div>
+
+  <div class="field">
+    <label class="label">Student Name</label>
+    <input type="text" id="studentName" placeholder="Your Name (e.g. Alex Chen)" />
+  </div>
+
+  <div class="field">
+    <label class="label">Session ID</label>
+    <input type="text" id="sessionId" value="live-demo-session" placeholder="e.g. live-demo-session" />
+  </div>
+
+  <div class="field">
+    <label class="label">Backend WebSocket URL</label>
+    <input type="text" id="wsBaseUrl" value="ws://127.0.0.1:8000/ws/session" />
+  </div>
+
+  <button class="btn" id="saveBtn">Save & Sync Settings</button>
+  <button class="btn btn-secondary" id="openMeetBtn">Open Google Meet ↗</button>
+  <button class="btn btn-secondary" id="openPortalBtn">Open Classroom Portal ↗</button>
+
+  <div class="toast" id="toastMsg">✓ Settings saved & synced!</div>
+
+  <div class="footer">
+    Privacy Guaranteed: Zero biometric facial AI or continuous video recording.
+  </div>
+
+  <script src="popup.js"></script>
 </body>
 </html>
-

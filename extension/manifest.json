@@ -1,16 +1,18 @@
 {
   "manifest_version": 3,
   "name": "Student Learning Session Companion",
-  "version": "1.0.0",
-  "description": "Monitors class tab focus and reports engagement telemetry to the learning portal.",
+  "version": "1.2.0",
+  "description": "Monitors class tab focus on learning portals and Google Meet, reporting engagement telemetry with zero biometrics.",
   "permissions": [
     "tabs",
     "windows",
-    "idle"
+    "idle",
+    "storage"
   ],
   "host_permissions": [
     "http://localhost/*",
     "http://127.0.0.1/*",
+    "https://meet.google.com/*",
     "https://*/*"
   ],
   "background": {
@@ -25,6 +27,13 @@
       ],
       "js": ["bridge.js"],
       "run_at": "document_start"
+    },
+    {
+      "matches": [
+        "https://meet.google.com/*"
+      ],
+      "js": ["meet_bridge.js"],
+      "run_at": "document_end"
     }
   ],
   "action": {
@@ -32,4 +41,3 @@
     "default_title": "Student Learning Companion"
   }
 }
-

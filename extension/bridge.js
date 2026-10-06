@@ -14,7 +14,7 @@ try {
       window.postMessage(
         {
           type: "EXTENSION_HANDSHAKE_ACK",
-          version: "1.0.0",
+          version: "1.2.0",
           verified: true,
         },
         "*"
@@ -33,17 +33,32 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   sendResponse({ received: true });
 });
 
-// 3. Listen for pings from the web page DOM
+// 3. Listen for events from the web page DOM
 window.addEventListener("message", (event) => {
-  if (event.data && event.data.type === "CLASSROOM_EXT_PING") {
+  if (!event.data || typeof event.data !== "object") return;
+
+  // Handshake ping from learning portal
+  if (event.data.type === "CLASSROOM_EXT_PING") {
     window.postMessage(
       {
         type: "EXTENSION_HANDSHAKE_ACK",
-        version: "1.0.0",
+        version: "1.2.0",
         verified: true,
       },
       "*"
     );
   }
-});
 
+  // Session sync from learning portal -> save to extension storage for Google Meet
+  if (event.data.type === "CLASSROOM_SESSION_SYNC") {
+    chrome.runtime.sendMessage({
+      type: "SYNC_CONFIG",
+      config: {
+        sessionId: event.data.sessionId,
+        studentId: event.data.studentId,
+        studentName: event.data.studentName,
+        wsBaseUrl: event.data.wsUrl || "ws://localhost:8000/ws/session",
+      },
+    });
+  }
+});
