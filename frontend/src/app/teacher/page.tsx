@@ -15,7 +15,8 @@ import {
   Search,
   Filter,
   RefreshCw,
-  LogOut
+  LogOut,
+  Globe
 } from "lucide-react";
 import Link from "next/link";
 
@@ -25,6 +26,8 @@ interface StudentCard {
   currentStatus: "ACTIVE" | "IDLE" | "TAB_AWAY" | "WINDOW_UNFOCUSED" | "DISCONNECTED";
   cameraOn: boolean;
   extensionActive: boolean;
+  platform?: string;
+  source?: string;
   tabAwayCount: number;
   windowBlurCount: number;
   lastActiveAt: number;
@@ -44,7 +47,7 @@ export default function TeacherDashboardPage() {
   const [sessionTitle, setSessionTitle] = useState<string>("CS101: Data Structures & Live Telemetry");
   const [students, setStudents] = useState<Record<string, StudentCard>>({});
   const [logs, setLogs] = useState<EventLog[]>([]);
-  const [filter, setFilter] = useState<"all" | "attention" | "camera_off">("all");
+  const [filter, setFilter] = useState<"all" | "attention" | "camera_off" | "google_meet">("all");
   const [search, setSearch] = useState<string>("");
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
@@ -198,12 +201,14 @@ export default function TeacherDashboardPage() {
   const idleCount = studentList.filter((s) => s.currentStatus === "IDLE").length;
   const awayCount = studentList.filter((s) => s.currentStatus === "TAB_AWAY" || s.currentStatus === "WINDOW_UNFOCUSED").length;
   const cameraOnCount = studentList.filter((s) => s.cameraOn).length;
+  const googleMeetCount = studentList.filter((s) => s.platform === "GOOGLE_MEET" || s.source === "GOOGLE_MEET" || (s.reason && s.reason.includes("Google Meet"))).length;
 
   const filteredStudents = studentList.filter((s) => {
     const matchesSearch = s.name.toLowerCase().includes(search.toLowerCase());
     if (!matchesSearch) return false;
     if (filter === "attention") return s.currentStatus !== "ACTIVE";
     if (filter === "camera_off") return !s.cameraOn;
+    if (filter === "google_meet") return s.platform === "GOOGLE_MEET" || s.source === "GOOGLE_MEET" || (s.reason && s.reason.includes("Google Meet"));
     return true;
   });
 
@@ -321,6 +326,16 @@ export default function TeacherDashboardPage() {
               >
                 Camera OFF ({studentList.length - cameraOnCount})
               </button>
+              <button
+                onClick={() => setFilter("google_meet")}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+                  filter === "google_meet"
+                    ? "bg-emerald-600 text-white"
+                    : "bg-slate-800 text-slate-400 hover:text-white"
+                }`}
+              >
+                Google Meet ({googleMeetCount})
+              </button>
             </div>
 
             <div className="flex items-center gap-3">
@@ -410,6 +425,18 @@ export default function TeacherDashboardPage() {
                           ) : (
                             <span className="text-slate-500 flex items-center gap-1">
                               <VideoOff className="w-3.5 h-3.5" /> Cam OFF
+                            </span>
+                          )}
+                        </span>
+                        <span>•</span>
+                        <span className="flex items-center gap-1">
+                          {student.platform === "GOOGLE_MEET" || student.source === "GOOGLE_MEET" || (student.reason && student.reason.includes("Google Meet")) ? (
+                            <span className="text-emerald-400 font-medium flex items-center gap-1" title="Active inside Google Meet call">
+                              <Video className="w-3.5 h-3.5 text-emerald-400" /> Google Meet
+                            </span>
+                          ) : (
+                            <span className="text-blue-400 font-medium flex items-center gap-1" title="Active on Classroom Web Portal">
+                              <Globe className="w-3.5 h-3.5 text-blue-400" /> Web Portal
                             </span>
                           )}
                         </span>
