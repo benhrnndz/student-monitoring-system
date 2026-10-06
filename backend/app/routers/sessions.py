@@ -111,6 +111,21 @@ def get_session_report(session_id: str, db: Session = Depends(get_db)):
     results = []
     for att in attendances:
         student = db.query(User).filter(User.id == att.student_id).first()
+        total_time = (
+            att.total_active_seconds +
+            att.total_idle_seconds +
+            att.total_tab_away_seconds +
+            att.total_window_away_seconds
+        )
+        if total_time > 0:
+            computed_score = round(
+                ((att.total_active_seconds + 0.2 * att.total_idle_seconds) / total_time) * 100.0,
+                1
+            )
+            computed_score = max(0.0, min(100.0, computed_score))
+        else:
+            computed_score = 100.0
+
         results.append({
             "studentId": att.student_id,
             "studentName": student.full_name if student else "Unknown",
@@ -121,7 +136,7 @@ def get_session_report(session_id: str, db: Session = Depends(get_db)):
             "totalTabAwaySeconds": att.total_tab_away_seconds,
             "totalWindowAwaySeconds": att.total_window_away_seconds,
             "cameraOnSeconds": att.camera_on_seconds,
-            "engagementScore": att.engagement_score,
+            "engagementScore": computed_score,
             "extensionVerified": att.extension_verified
         })
 
