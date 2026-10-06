@@ -149,6 +149,86 @@ def test_batch_nudge_and_engagement_calculation():
     assert dan_report["engagementScore"] < 100.0, f"Engagement score did not drop: {dan_report['engagementScore']}"
     print(f"[TEST METRICS] SUCCESS! Engagement score dropped to {dan_report['engagementScore']}% and away time tracked accurately.")
 
+def test_google_meet_telemetry_flow():
+    import time
+    client = TestClient(app)
+
+    res = client.get("/api/sessions/active")
+    session_id = res.json()["id"]
+
+    with client.websocket_connect(f"/ws/session/{session_id}?role=teacher&user_name=Prof.%20Sarah") as teacher_ws:
+        teacher_ws.receive_json() # Roster sync
+
+        # Connect Google Meet student
+        with client.websocket_connect(
+            f"/ws/session/{session_id}?role=student&user_id=meet-student-1&user_name=Meet%20Attendee"
+        ) as meet_ws:
+            teacher_ws.receive_json() # Join reflection
+
+            # 1. Google Meet camera toggle
+            meet_ws.send_json({
+                "event": "telemetry:camera_toggle",
+                "sessionId": session_id,
+                "timestamp": int(time.time()),
+                "payload": {
+                    "studentId": "meet-student-1",
+                    "cameraOn": True,
+                    "source": "GOOGLE_MEET"
+                }
+            })
+            cam_msg = teacher_ws.receive_json()
+            assert cam_msg["payload"]["cameraOn"] is True
+            print("[TEST MEET] SUCCESS! Google Meet camera state reflected to Teacher Dashboard: ON")
+
+            # 2. Student switches away from Google Meet tab to YouTube
+            meet_ws.send_json({
+                "event": "telemetry:status_change",
+                "sessionId": session_id,
+                "timestamp": int(time.time()),
+                "payload": {
+                    "studentId": "meet-student-1",
+                    "previousStatus": "ACTIVE",
+                    "newStatus": "TAB_AWAY",
+                    "reason": "Switched away from Google Meet call > 5s",
+                    "source": "GOOGLE_MEET"
+                }
+            })
+            away_msg = teacher_ws.receive_json()
+            assert away_msg["payload"]["currentStatus"] == "TAB_AWAY"
+            print("[TEST MEET] SUCCESS! Google Meet tab switch reflected: TAB_AWAY")
+
+            # 3. Teacher sends individual nudge to the Google Meet student
+            teacher_ws.send_json({
+                "event": "teacher:nudge",
+                "payload": {
+                    "studentId": "meet-student-1",
+                    "message": "Please refocus on the presentation in Google Meet!"
+                }
+            })
+
+            nudge_msg = meet_ws.receive_json()
+            assert nudge_msg["event"] == "student:nudge"
+            assert "Google Meet" in nudge_msg["payload"]["message"]
+            print(f"[TEST MEET] SUCCESS! Google Meet client received focus nudge: {nudge_msg['payload']['message']}")
+
+            # 4. Student clicks 'I am Listening' on Google Meet in-meeting HUD
+            meet_ws.send_json({
+                "event": "telemetry:status_change",
+                "sessionId": session_id,
+                "timestamp": int(time.time()),
+                "payload": {
+                    "studentId": "meet-student-1",
+                    "previousStatus": "TAB_AWAY",
+                    "newStatus": "ACTIVE",
+                    "reason": "Acknowledged instructor nudge in Google Meet",
+                    "source": "GOOGLE_MEET"
+                }
+            })
+            active_msg = teacher_ws.receive_json()
+            assert active_msg["payload"]["currentStatus"] == "ACTIVE"
+            print("[TEST MEET] SUCCESS! In-meeting acknowledgement restored status to ACTIVE!")
+
 if __name__ == "__main__":
     test_teacher_student_reflection()
     test_batch_nudge_and_engagement_calculation()
+    test_google_meet_telemetry_flow()
