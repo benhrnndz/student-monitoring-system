@@ -16,7 +16,9 @@ async def session_websocket_endpoint(
     session_id: str,
     role: str = Query(default="student"),
     user_id: str = Query(default="anonymous"),
-    user_name: str = Query(default="Student")
+    user_name: str = Query(default="Student"),
+    source: str = Query(default="web"),
+    extension: bool = Query(default=False)
 ):
     db = SessionLocal()
     attendance_record = None
@@ -51,13 +53,20 @@ async def session_websocket_endpoint(
         else:
             # Student Connection
             # 1. First, connect to in-memory real-time manager so presence is INSTANT
+            norm_source = source.upper() if source else "WEB"
+            is_meet = "MEET" in norm_source
             await ws_manager.connect_student(
                 session_id=session_id,
                 student_id=user_id,
-                student_info={"name": user_name},
+                student_info={
+                    "name": user_name,
+                    "source": norm_source,
+                    "platform": "GOOGLE_MEET" if is_meet else "WEB",
+                    "extensionInstalled": bool(extension or is_meet)
+                },
                 websocket=websocket
             )
-            logger.info(f"Student {user_name} ({user_id}) joined session {session_id}")
+            logger.info(f"Student {user_name} ({user_id}) joined session {session_id} via {norm_source}")
 
             # 2. Safely ensure session & user exist in DB so FK constraints succeed
             try:
@@ -106,11 +115,15 @@ async def session_websocket_endpoint(
                     attendance_record = SessionAttendance(
                         session_id=session_id,
                         student_id=user_id,
-                        first_joined_at=datetime.now(timezone.utc)
+                        first_joined_at=datetime.now(timezone.utc),
+                        extension_verified=bool(extension or is_meet)
                     )
                     db.add(attendance_record)
                     db.commit()
                     db.refresh(attendance_record)
+                elif (extension or is_meet) and not attendance_record.extension_verified:
+                    attendance_record.extension_verified = True
+                    db.commit()
             except Exception as db_err:
                 logger.error(f"DB attendance setup error (continuing in real-time mode): {db_err}")
                 db.rollback()
@@ -186,7 +199,17 @@ async def session_websocket_endpoint(
                                 accumulate_elapsed()
                                 if payload.get("cameraOn"):
                                     attendance_record.camera_on_seconds += 15
+                                if payload.get("source") and "MEET" in str(payload.get("source")).upper():
+                                    attendance_record.extension_verified = True
                                 db.commit()
+
+                            # Sync in-memory student if source provided
+                            if payload.get("source") and session_id in ws_manager.rooms and user_id in ws_manager.rooms[session_id]["students"]:
+                                s = ws_manager.rooms[session_id]["students"][user_id]
+                                s["source"] = payload["source"]
+                                if "MEET" in str(payload["source"]).upper():
+                                    s["platform"] = "GOOGLE_MEET"
+                                    s["extensionActive"] = True
                         except Exception:
                             db.rollback()
 
