@@ -76,7 +76,79 @@ def test_teacher_student_reflection():
         assert disconnect_msg["payload"]["currentStatus"] == "DISCONNECTED"
         print(f"[TEST 7] SUCCESS! Teacher received student disconnect reflection.")
 
-    print("\n>>> ALL TESTS PASSED! Student-to-Teacher real-time reflection verified 100%!")
+    print("\n>>> TEST SUITE 1 PASSED! Student-to-Teacher real-time reflection verified!")
+
+def test_batch_nudge_and_engagement_calculation():
+    import time
+    client = TestClient(app)
+
+    res = client.get("/api/sessions/active")
+    session_id = res.json()["id"]
+
+    with client.websocket_connect(f"/ws/session/{session_id}?role=teacher&user_name=Prof.%20Sarah") as teacher_ws:
+        teacher_ws.receive_json() # roster sync
+
+        # Connect Active Sam
+        with client.websocket_connect(f"/ws/session/{session_id}?role=student&user_id=active-sam&user_name=Active%20Sam") as sam_ws:
+            teacher_ws.receive_json() # Sam join
+
+            # Connect Distracted Dan
+            with client.websocket_connect(f"/ws/session/{session_id}?role=student&user_id=dan-uuid&user_name=Distracted%20Dan") as dan_ws:
+                teacher_ws.receive_json() # Dan join
+
+                # Dan switches tab
+                dan_ws.send_json({
+                    "event": "telemetry:status_change",
+                    "sessionId": session_id,
+                    "timestamp": int(time.time()),
+                    "payload": {
+                        "studentId": "dan-uuid",
+                        "previousStatus": "ACTIVE",
+                        "newStatus": "TAB_AWAY",
+                        "reason": "Tab hidden",
+                        "gracePeriodSeconds": 5
+                    }
+                })
+                teacher_ws.receive_json() # Dan TAB_AWAY reflection
+
+                # Issue 3 Verification: Teacher sends teacher:nudge_all
+                teacher_ws.send_json({
+                    "event": "teacher:nudge_all",
+                    "payload": { "message": "Class alert: please refocus!" }
+                })
+
+                # Teacher receives nudge_all_ack with nudgedCount == 1 (only Dan was inattentive)
+                ack = teacher_ws.receive_json()
+                assert ack["event"] == "teacher:nudge_all_ack", f"Expected nudge_all_ack, got {ack}"
+                assert ack["payload"]["nudgedCount"] == 1, f"Expected 1 nudged student, got {ack['payload']['nudgedCount']}"
+                print(f"[TEST BATCH NUDGE] SUCCESS! Teacher batch nudged {ack['payload']['nudgedCount']} inattentive student(s)")
+
+                # Dan receives student:nudge
+                dan_nudge = dan_ws.receive_json()
+                assert dan_nudge["event"] == "student:nudge"
+                assert dan_nudge["payload"]["message"] == "Class alert: please refocus!"
+                print(f"[TEST BATCH NUDGE] SUCCESS! Inattentive student received nudge: {dan_nudge['payload']['message']}")
+
+                # Let 1 second pass in TAB_AWAY to verify exact elapsed accumulation (Issue 2)
+                time.sleep(1.1)
+
+            # Dan disconnected
+            teacher_ws.receive_json()
+
+    # Query report to verify Issue 1 (Engagement Score < 100%) and Issue 2 (Accurate idle/away duration, not 300s+)
+    report_res = client.get(f"/api/sessions/{session_id}/report")
+    assert report_res.status_code == 200
+    report_data = report_res.json()
+    dan_report = next((s for s in report_data["attendances"] if s["studentId"] == "dan-uuid"), None)
+    assert dan_report is not None, "Dan report not found"
+
+    print(f"[REPORT METRICS] Dan tab away seconds: {dan_report['totalTabAwaySeconds']}s (Must NOT be 300s+)")
+    print(f"[REPORT METRICS] Dan engagement score: {dan_report['engagementScore']}% (Must be < 100%)")
+
+    assert 1 <= dan_report["totalTabAwaySeconds"] < 10, f"Tab away seconds not tracked accurately: {dan_report['totalTabAwaySeconds']}"
+    assert dan_report["engagementScore"] < 100.0, f"Engagement score did not drop: {dan_report['engagementScore']}"
+    print(f"[TEST METRICS] SUCCESS! Engagement score dropped to {dan_report['engagementScore']}% and away time tracked accurately.")
 
 if __name__ == "__main__":
     test_teacher_student_reflection()
+    test_batch_nudge_and_engagement_calculation()
