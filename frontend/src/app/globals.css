@@ -1,8 +1,17 @@
 @import "tailwindcss";
 
 :root {
-  --background: #020617;
-  --foreground: #f8fafc;
+  --background: #f8fafc;
+  --surface: #ffffff;
+  --surface-muted: #f1f5f9;
+  --foreground: #0f172a;
+  --foreground-muted: #475569;
+  --subtle: #64748b;
+  --border-subtle: #e2e8f0;
+  --border-active: #0a152d;
+  --navy-header: #0a152d;
+  --navy-accent: #1e293b;
+  --accent-blue: #2563eb;
 }
 
 body {
@@ -11,4 +20,53 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   margin: 0;
   padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom Text Selection */
+::selection {
+  background-color: #0a152d;
+  color: #ffffff;
+}
+
+/* Themed Light Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f8fafc;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Emil Kowalski Tactile Physics */
+.pressable {
+  transition: transform 0.12s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.pressable:active {
+  transform: scale(0.98);
+}
+
+.pressable-sm {
+  transition: transform 0.12s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.15s ease;
+}
+
+.pressable-sm:active {
+  transform: scale(0.96);
+}
+
+/* Tabular Numbers */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
 }
