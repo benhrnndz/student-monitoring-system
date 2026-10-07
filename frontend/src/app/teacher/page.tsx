@@ -13,10 +13,10 @@ import {
   Bell, 
   ExternalLink,
   Search,
-  Filter,
-  RefreshCw,
   LogOut,
-  Globe
+  Globe,
+  ArrowRight,
+  UserCheck
 } from "lucide-react";
 import Link from "next/link";
 
@@ -44,8 +44,9 @@ interface EventLog {
 
 export default function TeacherDashboardPage() {
   const [sessionId, setSessionId] = useState<string>("");
-  const [sessionTitle, setSessionTitle] = useState<string>("CS101: Data Structures & Live Telemetry");
+  const [sessionTitle, setSessionTitle] = useState<string>("CS101: Live Interactive Classroom");
   const [students, setStudents] = useState<Record<string, StudentCard>>({});
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [logs, setLogs] = useState<EventLog[]>([]);
   const [filter, setFilter] = useState<"all" | "attention" | "camera_off" | "google_meet">("all");
   const [search, setSearch] = useState<string>("");
@@ -71,7 +72,6 @@ export default function TeacherDashboardPage() {
       } catch (e) {
         console.warn("Could not load active session, falling back to default:", e);
       }
-      // Fallback default session ID
       setSessionId("live-demo-session");
     }
     loadActiveSession();
@@ -99,6 +99,9 @@ export default function TeacherDashboardPage() {
             studentMap[s.studentId] = s;
           });
           setStudents(studentMap);
+          if (data.payload.students.length > 0 && !selectedStudentId) {
+            setSelectedStudentId(data.payload.students[0].studentId);
+          }
         } else if (data.event === "teacher:student_updated") {
           const updated = data.payload as StudentCard;
           setStudents((prev) => ({
@@ -109,7 +112,7 @@ export default function TeacherDashboardPage() {
           const statusColor = updated.currentStatus === "ACTIVE" ? "info" : "warn";
           addLog(
             updated.name,
-            `Status changed to ${updated.currentStatus} ${updated.reason ? `(${updated.reason})` : ""}`,
+            `Status updated to ${updated.currentStatus} ${updated.reason ? `(${updated.reason})` : ""}`,
             statusColor
           );
         }
@@ -156,9 +159,9 @@ export default function TeacherDashboardPage() {
           },
         })
       );
-      setNudgeFeedback(`Sent focus ping to ${studentName}`);
+      setNudgeFeedback(`Sent focus check-in to ${studentName}`);
       setTimeout(() => setNudgeFeedback(null), 3000);
-      addLog("Teacher", `Sent focus ping to ${studentName}`, "info");
+      addLog("Teacher", `Sent focus check-in to ${studentName}`, "info");
     }
   }
 
@@ -175,7 +178,7 @@ export default function TeacherDashboardPage() {
           },
         })
       );
-      setNudgeFeedback(`Sent focus alert to all ${inattentiveCount} inattentive students!`);
+      setNudgeFeedback(`Sent focus check-in to all ${inattentiveCount} inattentive students!`);
       setTimeout(() => setNudgeFeedback(null), 3500);
       addLog("Teacher", `Broadcasted focus alert to all ${inattentiveCount} inattentive students`, "warn");
     }
@@ -189,7 +192,6 @@ export default function TeacherDashboardPage() {
     }
   }
 
-  // Format elapsed time (hh:mm:ss)
   const formatTime = (sec: number) => {
     const m = Math.floor(sec / 60);
     const s = sec % 60;
@@ -212,20 +214,24 @@ export default function TeacherDashboardPage() {
     return true;
   });
 
+  const selectedStudent = selectedStudentId && students[selectedStudentId] 
+    ? students[selectedStudentId] 
+    : filteredStudents.length > 0 ? filteredStudents[0] : null;
+
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
-      {/* Top Navbar */}
-      <header className="border-b border-slate-800 bg-slate-900/60 backdrop-blur px-6 py-4 flex flex-wrap items-center justify-between gap-4">
+    <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col selection:bg-[#0a152d] selection:text-white">
+      {/* Top Navbar: Dark Blue Grounding */}
+      <header className="bg-[#0a152d] text-white px-6 py-4 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-20 shadow-sm">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold tracking-tight text-white">{sessionTitle}</h1>
-            <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              LIVE
+            <h1 className="text-lg font-semibold tracking-tight text-white">{sessionTitle}</h1>
+            <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              Live Session
             </span>
           </div>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Join Code: <span className="font-mono font-bold text-slate-200">CS101A</span> • Duration: {formatTime(elapsedSeconds)}
+          <p className="text-xs text-slate-300 mt-1">
+            Session Code: <span className="font-mono font-bold text-white">CS101A</span> • Elapsed: <span className="font-mono tabular-nums text-white">{formatTime(elapsedSeconds)}</span>
           </p>
         </div>
 
@@ -233,276 +239,365 @@ export default function TeacherDashboardPage() {
           <Link
             href={`/classroom/${sessionId || "demo"}`}
             target="_blank"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition"
+            className="pressable flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold bg-[#132347] hover:bg-[#1c3366] text-white border border-white/10 shadow-sm"
           >
-            <ExternalLink className="w-4 h-4" />
-            Open Student View
+            <ExternalLink className="w-3.5 h-3.5 text-blue-300" />
+            <span>Open Student View</span>
           </Link>
           <button
             onClick={handleEndSession}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-semibold bg-rose-600 hover:bg-rose-500 text-white transition shadow-sm"
+            className="pressable flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white shadow-sm"
           >
-            <LogOut className="w-4 h-4" />
-            End Session & View Report
+            <LogOut className="w-3.5 h-3.5" />
+            <span>End Session & Report</span>
           </button>
         </div>
       </header>
 
-      {/* Nudge Notification Toast */}
+      {/* Floating Toast Notification */}
       {nudgeFeedback && (
-        <div className="fixed top-20 right-6 z-50 bg-blue-600 text-white px-4 py-2.5 rounded-lg shadow-lg text-sm font-medium flex items-center gap-2 animate-bounce">
-          <Bell className="w-4 h-4" />
-          {nudgeFeedback}
+        <div className="fixed top-20 right-6 z-50 bg-[#0a152d] text-white px-4 py-3 rounded-xl shadow-xl text-xs font-medium flex items-center gap-3 border border-white/15 animate-in fade-in slide-in-from-top-2">
+          <div className="w-6 h-6 rounded-full bg-blue-500/20 text-blue-300 flex items-center justify-center">
+            <Bell className="w-3.5 h-3.5" />
+          </div>
+          <span>{nudgeFeedback}</span>
         </div>
       )}
 
-      {/* Main Content Layout */}
-      <div className="flex-1 flex flex-col lg:flex-row p-6 gap-6">
-        {/* Left & Middle: Stats + Student Cards */}
-        <div className="flex-1 flex flex-col gap-6">
-          {/* Overview Metrics Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-              <div className="flex items-center justify-between text-slate-400 text-xs font-semibold uppercase">
-                <span>Active</span>
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              </div>
-              <div className="text-2xl font-bold text-emerald-400 mt-2">{activeCount}</div>
-              <p className="text-xs text-slate-500 mt-1">Interacting within last 5m</p>
+      {/* Main Workspace on Crisp White Canvas */}
+      <div className="flex-1 p-6 max-w-7xl mx-auto w-full flex flex-col gap-6">
+        {/* Metric Summary Strip: Clean White Cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="bg-white border border-slate-200/90 rounded-xl p-4 shadow-xs">
+            <div className="flex items-center justify-between text-slate-500 text-[11px] font-semibold uppercase tracking-wider">
+              <span>Active Students</span>
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
             </div>
-
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-              <div className="flex items-center justify-between text-slate-400 text-xs font-semibold uppercase">
-                <span>Idle</span>
-                <Clock className="w-4 h-4 text-amber-400" />
-              </div>
-              <div className="text-2xl font-bold text-amber-400 mt-2">{idleCount}</div>
-              <p className="text-xs text-slate-500 mt-1">No input for &gt; 5 mins</p>
-            </div>
-
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-              <div className="flex items-center justify-between text-slate-400 text-xs font-semibold uppercase">
-                <span>Tab / Window Away</span>
-                <AlertTriangle className="w-4 h-4 text-rose-400" />
-              </div>
-              <div className="text-2xl font-bold text-rose-400 mt-2">{awayCount}</div>
-              <p className="text-xs text-slate-500 mt-1">Switched tab &gt; 5s or app &gt; 10s</p>
-            </div>
-
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-              <div className="flex items-center justify-between text-slate-400 text-xs font-semibold uppercase">
-                <span>Camera ON</span>
-                <Video className="w-4 h-4 text-blue-400" />
-              </div>
-              <div className="text-2xl font-bold text-blue-400 mt-2">{cameraOnCount} <span className="text-sm font-normal text-slate-500">/ {studentList.length}</span></div>
-              <p className="text-xs text-slate-500 mt-1">Hardware state (no face AI)</p>
-            </div>
+            <div className="text-2xl font-bold font-mono tabular-nums text-[#0a152d] mt-2">{activeCount}</div>
+            <p className="text-xs text-slate-500 mt-1">Interacting within last 5m</p>
           </div>
 
-          {/* Search & Filter Bar */}
-          <div className="flex flex-wrap items-center justify-between gap-4 bg-slate-900/40 p-3 rounded-xl border border-slate-800/80">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setFilter("all")}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
-                  filter === "all" ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"
-                }`}
-              >
-                All Students ({studentList.length})
-              </button>
-              <button
-                onClick={() => setFilter("attention")}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
-                  filter === "attention" ? "bg-amber-500/20 text-amber-300 border border-amber-500/30" : "bg-slate-800 text-slate-400 hover:text-white"
-                }`}
-              >
-                Needs Attention ({idleCount + awayCount})
-              </button>
-              <button
-                onClick={() => setFilter("camera_off")}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
-                  filter === "camera_off" ? "bg-slate-700 text-white" : "bg-slate-800 text-slate-400 hover:text-white"
-                }`}
-              >
-                Camera OFF ({studentList.length - cameraOnCount})
-              </button>
-              <button
-                onClick={() => setFilter("google_meet")}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
-                  filter === "google_meet"
-                    ? "bg-emerald-600 text-white"
-                    : "bg-slate-800 text-slate-400 hover:text-white"
-                }`}
-              >
-                Google Meet ({googleMeetCount})
-              </button>
+          <div className="bg-white border border-slate-200/90 rounded-xl p-4 shadow-xs">
+            <div className="flex items-center justify-between text-slate-500 text-[11px] font-semibold uppercase tracking-wider">
+              <span>Idle Students</span>
+              <Clock className="w-3.5 h-3.5 text-amber-600" />
             </div>
-
-            <div className="flex items-center gap-3">
-              {idleCount + awayCount > 0 && (
-                <button
-                  onClick={handlePingAllInattentive}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 transition shadow-sm animate-pulse"
-                  title="Send a focus check-in alert to all students who are currently Idle or Away"
-                >
-                  <Bell className="w-3.5 h-3.5" />
-                  Ping All Inattentive ({idleCount + awayCount})
-                </button>
-              )}
-
-              <div className="relative">
-                <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
-                <input
-                  type="text"
-                  placeholder="Search student..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="bg-slate-900 border border-slate-800 rounded-lg pl-9 pr-4 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500 w-48"
-                />
-              </div>
-            </div>
+            <div className="text-2xl font-bold font-mono tabular-nums text-amber-700 mt-2">{idleCount}</div>
+            <p className="text-xs text-slate-500 mt-1">No input for &gt; 5 mins</p>
           </div>
 
-          {/* Student Grid */}
-          {filteredStudents.length === 0 ? (
-            <div className="bg-slate-900/20 border border-dashed border-slate-800 rounded-xl p-12 text-center">
-              <Users className="w-10 h-10 text-slate-600 mx-auto mb-3" />
-              <p className="text-slate-400 text-sm">No students currently in session.</p>
-              <p className="text-slate-500 text-xs mt-1">Open the student link in another tab or window to see live telemetry in action!</p>
+          <div className="bg-white border border-slate-200/90 rounded-xl p-4 shadow-xs">
+            <div className="flex items-center justify-between text-slate-500 text-[11px] font-semibold uppercase tracking-wider">
+              <span>Tab / Window Away</span>
+              <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
             </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {filteredStudents.map((student) => {
-                const isTabAway = student.currentStatus === "TAB_AWAY";
-                const isWindowBlur = student.currentStatus === "WINDOW_UNFOCUSED";
-                const isIdle = student.currentStatus === "IDLE";
-                const isActive = student.currentStatus === "ACTIVE";
+            <div className="text-2xl font-bold font-mono tabular-nums text-rose-700 mt-2">{awayCount}</div>
+            <p className="text-xs text-slate-500 mt-1">Tab &gt; 5s or window &gt; 10s</p>
+          </div>
 
-                let badgeBg = "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
-                let badgeText = "ACTIVE";
-                let dotColor = "bg-emerald-500";
-
-                if (isIdle) {
-                  badgeBg = "bg-amber-500/10 text-amber-400 border-amber-500/20";
-                  badgeText = "IDLE (> 5m)";
-                  dotColor = "bg-amber-500";
-                } else if (isTabAway) {
-                  badgeBg = "bg-orange-500/10 text-orange-400 border-orange-500/20";
-                  badgeText = "TAB AWAY (> 5s)";
-                  dotColor = "bg-orange-500";
-                } else if (isWindowBlur) {
-                  badgeBg = "bg-rose-500/10 text-rose-400 border-rose-500/20";
-                  badgeText = "OFF-SCREEN (> 10s)";
-                  dotColor = "bg-rose-500";
-                }
-
-                return (
-                  <div
-                    key={student.studentId}
-                    className={`bg-slate-900 border rounded-xl p-4 flex flex-col justify-between transition-all ${
-                      isTabAway || isWindowBlur
-                        ? "border-rose-500/40 shadow-lg shadow-rose-950/20"
-                        : isIdle
-                        ? "border-amber-500/30"
-                        : "border-slate-800"
-                    }`}
-                  >
-                    <div>
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-semibold text-slate-100 text-sm">{student.name}</span>
-                        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold border ${badgeBg}`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${dotColor} ${isActive ? "animate-pulse" : ""}`}></span>
-                          {badgeText}
-                        </span>
-                      </div>
-
-                      <div className="mt-3 flex items-center gap-3 text-xs text-slate-400">
-                        <span className="flex items-center gap-1">
-                          {student.cameraOn ? (
-                            <span className="text-emerald-400 flex items-center gap-1">
-                              <Video className="w-3.5 h-3.5" /> Cam ON
-                            </span>
-                          ) : (
-                            <span className="text-slate-500 flex items-center gap-1">
-                              <VideoOff className="w-3.5 h-3.5" /> Cam OFF
-                            </span>
-                          )}
-                        </span>
-                        <span>•</span>
-                        <span className="flex items-center gap-1">
-                          {student.platform === "GOOGLE_MEET" || student.source === "GOOGLE_MEET" || (student.reason && student.reason.includes("Google Meet")) ? (
-                            <span className="text-emerald-400 font-medium flex items-center gap-1" title="Active inside Google Meet call">
-                              <Video className="w-3.5 h-3.5 text-emerald-400" /> Google Meet
-                            </span>
-                          ) : (
-                            <span className="text-blue-400 font-medium flex items-center gap-1" title="Active on Classroom Web Portal">
-                              <Globe className="w-3.5 h-3.5 text-blue-400" /> Web Portal
-                            </span>
-                          )}
-                        </span>
-                        <span>•</span>
-                        <span className="flex items-center gap-1">
-                          <ShieldCheck className={`w-3.5 h-3.5 ${student.extensionActive ? "text-blue-400" : "text-slate-600"}`} />
-                          {student.extensionActive ? "Ext Verified" : "Web Only"}
-                        </span>
-                      </div>
-
-                      <div className="mt-2 text-xs text-slate-500 flex items-center justify-between">
-                        <span>Tab Away count: <strong className="text-slate-300">{student.tabAwayCount}</strong></span>
-                        <span>Blur count: <strong className="text-slate-300">{student.windowBlurCount}</strong></span>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-end">
-                      <button
-                        onClick={() => handlePingStudent(student.studentId, student.name)}
-                        className="px-2.5 py-1 text-xs font-medium rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center gap-1.5 transition"
-                        title="Send focus reminder to this student"
-                      >
-                        <Bell className="w-3.5 h-3.5" />
-                        Ping Student
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
+          <div className="bg-white border border-slate-200/90 rounded-xl p-4 shadow-xs">
+            <div className="flex items-center justify-between text-slate-500 text-[11px] font-semibold uppercase tracking-wider">
+              <span>Camera Active</span>
+              <Video className="w-3.5 h-3.5 text-blue-600" />
             </div>
-          )}
+            <div className="text-2xl font-bold font-mono tabular-nums text-[#0a152d] mt-2">
+              {cameraOnCount} <span className="text-xs font-normal text-slate-400">/ {studentList.length}</span>
+            </div>
+            <p className="text-xs text-slate-500 mt-1">Hardware state (no video stream)</p>
+          </div>
         </div>
 
-        {/* Right Drawer: Live Audit Stream */}
-        <div className="w-full lg:w-80 bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col h-[650px]">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-blue-500 animate-ping"></span>
-              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-300">Live Telemetry Feed</h2>
-            </div>
-            <span className="text-xs font-mono text-slate-500">{logs.length} events</span>
+        {/* Filter and Search Bar */}
+        <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-3 rounded-xl border border-slate-200/90 shadow-xs">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => setFilter("all")}
+              className={`pressable px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                filter === "all" ? "bg-[#0a152d] text-white shadow-xs" : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+              }`}
+            >
+              All Students ({studentList.length})
+            </button>
+            <button
+              onClick={() => setFilter("attention")}
+              className={`pressable px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                filter === "attention" ? "bg-amber-600 text-white shadow-xs" : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+              }`}
+            >
+              Needs Attention ({idleCount + awayCount})
+            </button>
+            <button
+              onClick={() => setFilter("camera_off")}
+              className={`pressable px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                filter === "camera_off" ? "bg-[#0a152d] text-white shadow-xs" : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+              }`}
+            >
+              Camera Off ({studentList.length - cameraOnCount})
+            </button>
+            <button
+              onClick={() => setFilter("google_meet")}
+              className={`pressable px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                filter === "google_meet"
+                  ? "bg-emerald-700 text-white shadow-xs"
+                  : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+              }`}
+            >
+              Google Meet ({googleMeetCount})
+            </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto mt-3 space-y-2.5 pr-1 font-mono text-xs">
-            {logs.length === 0 ? (
-              <p className="text-slate-600 text-center mt-12 text-xs">Waiting for telemetry events...</p>
-            ) : (
-              logs.map((log) => (
-                <div
-                  key={log.id}
-                  className={`p-2 rounded border text-xs leading-relaxed ${
-                    log.type === "warn"
-                      ? "bg-rose-950/20 border-rose-900/30 text-rose-300"
-                      : log.type === "status"
-                      ? "bg-blue-950/20 border-blue-900/30 text-blue-300"
-                      : "bg-slate-850 border-slate-800 text-slate-400"
-                  }`}
-                >
-                  <div className="flex items-center justify-between text-[10px] text-slate-500 mb-1">
-                    <span className="font-semibold text-slate-300">{log.studentName}</span>
-                    <span>{log.time}</span>
-                  </div>
-                  <div>{log.text}</div>
-                </div>
-              ))
+          <div className="flex items-center gap-3">
+            {idleCount + awayCount > 0 && (
+              <button
+                onClick={handlePingAllInattentive}
+                className="pressable flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 shadow-xs"
+                title="Send focus check-in alert to all students who are currently Idle or Away"
+              >
+                <Bell className="w-3.5 h-3.5 text-amber-600" />
+                Ping Inattentive ({idleCount + awayCount})
+              </button>
             )}
+
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+              <input
+                type="text"
+                placeholder="Search student..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="bg-slate-50 border border-slate-200 focus:border-[#0a152d] rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-900 placeholder-slate-400 outline-none w-44"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Structured Master-Detail View: Table on Left + Inspector on Right */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main Column (2/3 width): High-Density Structured Roster Table */}
+          <div className="lg:col-span-2 bg-white border border-slate-200/90 rounded-xl overflow-hidden shadow-xs">
+            <div className="p-4 border-b border-slate-200 font-semibold text-xs text-[#0a152d] uppercase tracking-wider flex items-center justify-between bg-slate-50/50">
+              <span>Interactive Student Roster</span>
+              <span className="text-xs font-mono font-normal text-slate-500">
+                {filteredStudents.length} {filteredStudents.length === 1 ? "student" : "students"} listed
+              </span>
+            </div>
+
+            {filteredStudents.length === 0 ? (
+              <div className="p-12 text-center">
+                <Users className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+                <p className="text-sm font-semibold text-slate-700">No students currently match this filter.</p>
+                <p className="text-xs text-slate-500 mt-1">Open the student portal in a second tab to connect.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-[#f8fafc] text-slate-600 border-b border-slate-200 text-[11px] font-semibold uppercase tracking-wider">
+                    <tr>
+                      <th className="py-3 px-4">Student Name</th>
+                      <th className="py-3 px-4">Status</th>
+                      <th className="py-3 px-4">Platform</th>
+                      <th className="py-3 px-4">Camera</th>
+                      <th className="py-3 px-4 text-center">Tab Away</th>
+                      <th className="py-3 px-4 text-center">Blur</th>
+                      <th className="py-3 px-4 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-slate-700">
+                    {filteredStudents.map((student) => {
+                      const isSelected = selectedStudent?.studentId === student.studentId;
+                      const isTabAway = student.currentStatus === "TAB_AWAY";
+                      const isWindowBlur = student.currentStatus === "WINDOW_UNFOCUSED";
+                      const isIdle = student.currentStatus === "IDLE";
+                      const isActive = student.currentStatus === "ACTIVE";
+
+                      let badgeClass = "bg-emerald-50 text-emerald-700 border-emerald-200";
+                      let badgeDot = "bg-emerald-500";
+                      let badgeText = "Active";
+
+                      if (isIdle) {
+                        badgeClass = "bg-amber-50 text-amber-700 border-amber-200";
+                        badgeDot = "bg-amber-500";
+                        badgeText = "Idle (> 5m)";
+                      } else if (isTabAway) {
+                        badgeClass = "bg-rose-50 text-rose-700 border-rose-200";
+                        badgeDot = "bg-rose-500";
+                        badgeText = "Tab Away";
+                      } else if (isWindowBlur) {
+                        badgeClass = "bg-rose-50 text-rose-700 border-rose-200";
+                        badgeDot = "bg-rose-500";
+                        badgeText = "Off-Screen";
+                      }
+
+                      return (
+                        <tr
+                          key={student.studentId}
+                          onClick={() => setSelectedStudentId(student.studentId)}
+                          className={`cursor-pointer transition-colors ${
+                            isSelected 
+                              ? "bg-blue-50/70 border-l-4 border-l-[#0a152d]" 
+                              : "hover:bg-slate-50"
+                          }`}
+                        >
+                          <td className="py-3 px-4 font-semibold text-[#0a152d] flex items-center gap-2">
+                            <span>{student.name}</span>
+                            {student.extensionActive && (
+                              <span title="Extension Verified">
+                                <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold border ${badgeClass}`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${badgeDot} ${isActive ? "animate-pulse" : ""}`}></span>
+                              {badgeText}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            {student.platform === "GOOGLE_MEET" || student.source === "GOOGLE_MEET" || (student.reason && student.reason.includes("Google Meet")) ? (
+                              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                                <Video className="w-3 h-3 text-emerald-600" /> Google Meet
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
+                                <Globe className="w-3 h-3 text-slate-500" /> Web Portal
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4">
+                            {student.cameraOn ? (
+                              <span className="text-emerald-700 font-medium flex items-center gap-1">
+                                <Video className="w-3.5 h-3.5 text-emerald-600" /> ON
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 flex items-center gap-1">
+                                <VideoOff className="w-3.5 h-3.5 text-slate-400" /> OFF
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-center font-mono tabular-nums font-semibold text-slate-700">
+                            {student.tabAwayCount}
+                          </td>
+                          <td className="py-3 px-4 text-center font-mono tabular-nums font-semibold text-slate-700">
+                            {student.windowBlurCount}
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handlePingStudent(student.studentId, student.name);
+                              }}
+                              className="pressable-sm px-2.5 py-1 text-xs font-semibold rounded-lg bg-[#0a152d] hover:bg-[#132347] text-white shadow-xs inline-flex items-center gap-1"
+                            >
+                              <Bell className="w-3 h-3" />
+                              Ping
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Right Column: Student Detail Inspector & Telemetry Feed */}
+          <div className="space-y-6">
+            {/* Student Profile Detail Card */}
+            <div className="bg-white border border-slate-200/90 rounded-xl p-5 shadow-xs space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Student Inspector</span>
+                <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">Active Profile</span>
+              </div>
+
+              {selectedStudent ? (
+                <div className="space-y-4">
+                  <div>
+                    <h2 className="text-lg font-bold text-[#0a152d]">{selectedStudent.name}</h2>
+                    <p className="text-xs text-slate-500 font-mono">ID: {selectedStudent.studentId}</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2.5 text-xs">
+                    <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-lg">
+                      <span className="text-[10px] uppercase font-semibold text-slate-500 block">Current Focus</span>
+                      <strong className="text-slate-900 mt-0.5 block">{selectedStudent.currentStatus}</strong>
+                    </div>
+                    <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-lg">
+                      <span className="text-[10px] uppercase font-semibold text-slate-500 block">Platform</span>
+                      <strong className="text-slate-900 mt-0.5 block">
+                        {selectedStudent.platform === "GOOGLE_MEET" ? "Google Meet" : "Web Portal"}
+                      </strong>
+                    </div>
+                    <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-lg">
+                      <span className="text-[10px] uppercase font-semibold text-slate-500 block">Camera Hardware</span>
+                      <strong className="text-slate-900 mt-0.5 block">
+                        {selectedStudent.cameraOn ? "Enabled 🟢" : "Disabled ⚪"}
+                      </strong>
+                    </div>
+                    <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-lg">
+                      <span className="text-[10px] uppercase font-semibold text-slate-500 block">Tab Switches</span>
+                      <strong className="text-slate-900 mt-0.5 block font-mono tabular-nums">
+                        {selectedStudent.tabAwayCount} times
+                      </strong>
+                    </div>
+                  </div>
+
+                  {selectedStudent.reason && (
+                    <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
+                      <strong>Last Trigger:</strong> {selectedStudent.reason}
+                    </div>
+                  )}
+
+                  <button
+                    onClick={() => handlePingStudent(selectedStudent.studentId, selectedStudent.name)}
+                    className="pressable w-full py-2.5 rounded-xl bg-[#0a152d] hover:bg-[#132347] text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-sm"
+                  >
+                    <Bell className="w-3.5 h-3.5" />
+                    <span>Send Focus Check-In Prompt</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="py-6 text-center text-xs text-slate-500">
+                  Select a student from the roster table to view real-time metrics.
+                </div>
+              )}
+            </div>
+
+            {/* Live Telemetry Stream */}
+            <div className="bg-white border border-slate-200/90 rounded-xl p-5 shadow-xs flex flex-col h-[320px]">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse"></span>
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-700">Live Telemetry Feed</span>
+                </div>
+                <span className="text-xs font-mono tabular-nums text-slate-500">{logs.length} events</span>
+              </div>
+
+              <div className="flex-1 overflow-y-auto mt-3 space-y-2 pr-1 font-mono text-xs">
+                {logs.length === 0 ? (
+                  <p className="text-slate-400 text-center mt-8 text-xs font-sans">Awaiting telemetry activity...</p>
+                ) : (
+                  logs.map((log) => (
+                    <div
+                      key={log.id}
+                      className={`p-2.5 rounded-lg border text-xs leading-relaxed ${
+                        log.type === "warn"
+                          ? "bg-rose-50 border-rose-200 text-rose-800"
+                          : log.type === "status"
+                          ? "bg-blue-50 border-blue-200 text-blue-800"
+                          : "bg-slate-50 border-slate-200 text-slate-700"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between text-[10px] text-slate-500 mb-1">
+                        <strong className="text-slate-900">{log.studentName}</strong>
+                        <span className="tabular-nums">{log.time}</span>
+                      </div>
+                      <div>{log.text}</div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>
