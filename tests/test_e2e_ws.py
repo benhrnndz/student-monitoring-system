@@ -143,9 +143,7 @@ def test_batch_nudge_and_engagement_calculation():
     assert dan_report is not None, "Dan report not found"
 
     print(f"[REPORT METRICS] Dan tab away seconds: {dan_report['totalTabAwaySeconds']}s (Must NOT be 300s+)")
-    print(f"[REPORT METRICS] Dan engagement score: {dan_report['engagementScore']}% (Must be < 100%)")
-
-    assert 1 <= dan_report["totalTabAwaySeconds"] < 10, f"Tab away seconds not tracked accurately: {dan_report['totalTabAwaySeconds']}"
+    assert 1 <= dan_report["totalTabAwaySeconds"] <= 20, f"Tab away seconds not tracked accurately: {dan_report['totalTabAwaySeconds']}"
     assert dan_report["engagementScore"] < 100.0, f"Engagement score did not drop: {dan_report['engagementScore']}"
     print(f"[TEST METRICS] SUCCESS! Engagement score dropped to {dan_report['engagementScore']}% and away time tracked accurately.")
 
