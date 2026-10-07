@@ -9,10 +9,9 @@ import {
   ShieldCheck, 
   Clock, 
   Bell, 
-  Sparkles, 
   BookOpen, 
-  CheckCircle2, 
-  AlertCircle 
+  ExternalLink,
+  EyeOff
 } from "lucide-react";
 import Link from "next/link";
 
@@ -20,7 +19,7 @@ export default function StudentClassroomPage({ params }: { params: Promise<{ ses
   const resolvedParams = use(params);
   const sessionId = resolvedParams.sessionId;
 
-  // Student identity state (defaults to demo student Alex Chen)
+  // Student identity state
   const [studentId, setStudentId] = useState<string>("alex-chen-uuid");
   const [studentName, setStudentName] = useState<string>("Alex Chen");
 
@@ -64,7 +63,6 @@ export default function StudentClassroomPage({ params }: { params: Promise<{ ses
     socketRef.current = ws;
 
     ws.onopen = () => {
-      console.log("[Student WS] Connected to session", actualSessionId);
       setIsWsConnected(true);
 
       // Send initial heartbeat to register and sync with teacher dashboard
@@ -206,36 +204,36 @@ export default function StudentClassroomPage({ params }: { params: Promise<{ ses
   function handleDismissNudge() {
     setNudgeMessage(null);
     if (trackerRef.current) {
-      trackerRef.current.start(); // Resets input
+      trackerRef.current.start();
     }
   }
 
   // Status visual styles
-  let statusBadgeStyle = "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
+  let statusBadgeStyle = "bg-emerald-50 text-emerald-700 border-emerald-200";
   let statusDot = "bg-emerald-500";
   if (status === "IDLE") {
-    statusBadgeStyle = "bg-amber-500/10 text-amber-400 border-amber-500/20";
+    statusBadgeStyle = "bg-amber-50 text-amber-800 border-amber-200";
     statusDot = "bg-amber-500";
   } else if (status === "TAB_AWAY") {
-    statusBadgeStyle = "bg-orange-500/10 text-orange-400 border-orange-500/20";
-    statusDot = "bg-orange-500";
+    statusBadgeStyle = "bg-rose-50 text-rose-700 border-rose-200";
+    statusDot = "bg-rose-500";
   } else if (status === "WINDOW_UNFOCUSED") {
-    statusBadgeStyle = "bg-rose-500/10 text-rose-400 border-rose-500/20";
+    statusBadgeStyle = "bg-rose-50 text-rose-700 border-rose-200";
     statusDot = "bg-rose-500";
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
-      {/* Top Banner: Real-Time Status & Transparency */}
-      <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur px-6 py-3 flex flex-wrap items-center justify-between gap-4">
+    <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col selection:bg-[#0a152d] selection:text-white">
+      {/* Top Banner: Dark Blue Grounding */}
+      <header className="bg-[#0a152d] text-white px-6 py-3.5 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-20 shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-white text-sm">
+          <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center font-bold text-white text-xs tracking-wider shadow-sm">
             CS
           </div>
           <div>
-            <h1 className="text-sm font-bold text-slate-100">CS101: Live Interactive Classroom</h1>
-            <p className="text-xs text-slate-400">
-              Student: <span className="text-slate-200 font-medium">{studentName}</span>
+            <h1 className="text-sm font-semibold tracking-tight text-white">CS101: Live Interactive Classroom</h1>
+            <p className="text-xs text-slate-300">
+              Logged in as: <strong className="text-white">{studentName}</strong>
             </p>
           </div>
         </div>
@@ -243,37 +241,37 @@ export default function StudentClassroomPage({ params }: { params: Promise<{ ses
         {/* Live Focus State Indicator */}
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-400">Your Focus Status:</span>
+            <span className="text-xs text-slate-300">Focus State:</span>
             <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${statusBadgeStyle}`}>
-              <span className={`w-2 h-2 rounded-full ${statusDot} ${status === "ACTIVE" ? "animate-pulse" : ""}`}></span>
+              <span className={`w-1.5 h-1.5 rounded-full ${statusDot} ${status === "ACTIVE" ? "animate-pulse" : ""}`}></span>
               {status}
             </span>
           </div>
 
-          <div className="hidden sm:flex items-center gap-1.5 text-xs text-slate-400 bg-slate-900 px-3 py-1 rounded-lg border border-slate-800">
-            <Clock className="w-3.5 h-3.5 text-slate-400" />
-            <span>Idle in: <strong className="font-mono text-slate-200">{idleTimeRemaining}</strong></span>
+          <div className="hidden sm:flex items-center gap-1.5 text-xs text-slate-300 bg-[#132347] px-3 py-1 rounded-lg border border-white/10">
+            <Clock className="w-3.5 h-3.5 text-slate-300" />
+            <span>Idle in: <strong className="font-mono tabular-nums text-white">{idleTimeRemaining}</strong></span>
           </div>
 
-          <div className="flex items-center gap-1.5 text-xs text-slate-400">
-            <ShieldCheck className={`w-4 h-4 ${isExtensionAttached ? "text-blue-400" : "text-slate-600"}`} />
+          <div className="flex items-center gap-1.5 text-xs text-slate-300">
+            <ShieldCheck className={`w-4 h-4 ${isExtensionAttached ? "text-emerald-400" : "text-slate-400"}`} />
             <span className="hidden md:inline">{isExtensionAttached ? "Extension Verified" : "Web Only"}</span>
           </div>
         </div>
       </header>
 
-      {/* Instructor Nudge Alert Modal */}
+      {/* Focus Check-In Modal: Pure White Card */}
       {nudgeMessage && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-blue-500/40 rounded-2xl p-6 max-w-md w-full shadow-2xl text-center">
-            <div className="w-12 h-12 bg-blue-500/20 text-blue-400 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Bell className="w-6 h-6 animate-bounce" />
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 max-w-md w-full shadow-2xl text-center">
+            <div className="w-12 h-12 bg-blue-50 text-blue-600 border border-blue-200 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Bell className="w-5 h-5 animate-pulse" />
             </div>
-            <h3 className="text-lg font-bold text-white">Focus Check-In</h3>
-            <p className="text-sm text-slate-300 mt-2 leading-relaxed">{nudgeMessage}</p>
+            <h2 className="text-lg font-bold text-[#0a152d]">Focus Check-In</h2>
+            <p className="text-sm text-slate-600 mt-2 leading-relaxed">{nudgeMessage}</p>
             <button
               onClick={handleDismissNudge}
-              className="mt-6 w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm transition"
+              className="pressable mt-6 w-full py-2.5 rounded-xl bg-[#0a152d] hover:bg-[#132347] text-white font-semibold text-sm shadow-sm"
             >
               I am here & attentive!
             </button>
@@ -283,97 +281,100 @@ export default function StudentClassroomPage({ params }: { params: Promise<{ ses
 
       {/* Main Classroom Area */}
       <div className="flex-1 p-6 flex flex-col lg:flex-row gap-6 max-w-7xl mx-auto w-full">
-        {/* Left: Interactive Class Lecture Content */}
+        {/* Left: Lecture Content on Pure White Surface */}
         <div className="flex-1 flex flex-col gap-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 relative overflow-hidden flex-1 flex flex-col justify-between">
+          <div className="bg-white border border-slate-200/90 rounded-xl p-6 relative overflow-hidden flex-1 flex flex-col justify-between shadow-xs">
             <div>
-              <div className="flex items-center justify-between text-xs text-slate-400 pb-4 border-b border-slate-800">
-                <span className="flex items-center gap-1.5 font-medium text-slate-300">
-                  <BookOpen className="w-4 h-4 text-blue-400" />
-                  Lecture Notes & Slides
+              <div className="flex items-center justify-between text-xs text-slate-500 pb-4 border-b border-slate-100">
+                <span className="flex items-center gap-1.5 font-medium text-slate-700">
+                  <BookOpen className="w-4 h-4 text-blue-600" />
+                  Lecture Notes & Interactive Material
                 </span>
-                <span>Session Live</span>
+                <span className="font-mono text-emerald-700 font-semibold bg-emerald-50 px-2.5 py-0.5 rounded border border-emerald-200 text-xs">
+                  Active Telemetry Feed
+                </span>
               </div>
 
               <div className="mt-6 space-y-4">
-                <h2 className="text-2xl font-bold text-white tracking-tight">
-                  Understanding Real-Time Telemetry & Data Structures
+                <h2 className="text-2xl font-bold text-[#0a152d] tracking-tight">
+                  High-Throughput Telemetry in Distributed Classrooms
                 </h2>
-                <p className="text-sm text-slate-300 leading-relaxed">
-                  In today&apos;s lecture, we explore how high-throughput WebSocket gateways maintain sub-second state synchronization across hundreds of distributed student clients using Redis and PostgreSQL.
+                <p className="text-sm text-slate-600 leading-relaxed">
+                  WebSocket gateways maintain sub-second state synchronization across hundreds of distributed student clients, propagating tab focus and idle status securely.
                 </p>
 
-                <div className="bg-slate-950 p-4 rounded-xl border border-slate-800/80 font-mono text-xs text-blue-300 leading-relaxed">
+                <div className="bg-slate-900 p-4 rounded-xl font-mono text-xs text-blue-300 leading-relaxed shadow-xs">
                   <code>
-                    // Real-Time Event Dispatch Example<br />
-                    socket.emit(&quot;telemetry:heartbeat&quot;, &#123;<br />
+                    // Real-Time Event Dispatch<br />
+                    socket.send(JSON.stringify(&#123;<br />
+                    &nbsp;&nbsp;event: &quot;telemetry:heartbeat&quot;,<br />
                     &nbsp;&nbsp;studentId: &quot;{studentId}&quot;,<br />
                     &nbsp;&nbsp;status: &quot;{status}&quot;,<br />
                     &nbsp;&nbsp;cameraOn: {isCameraOn ? "true" : "false"}<br />
-                    &#125;);
+                    &#125;));
                   </code>
                 </div>
 
-                <div className="p-4 bg-slate-950/60 rounded-xl border border-slate-800 text-xs text-slate-400">
-                  <h4 className="font-semibold text-slate-200 mb-1">💡 What is being monitored right now?</h4>
-                  <ul className="list-disc list-inside space-y-1 text-slate-400">
-                    <li>Mouse movements and keyboard interactions (expires after 5 mins of inactivity).</li>
-                    <li>Switching away to another tab for &gt; 5 seconds.</li>
-                    <li>Focusing on another application or monitor for &gt; 10 seconds.</li>
-                    <li>Whether your camera hardware track is enabled (No face AI or video analysis).</li>
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-600">
+                  <h3 className="font-semibold text-[#0a152d] mb-2">Non-Intrusive Privacy Guarantees</h3>
+                  <ul className="list-disc list-inside space-y-1.5 text-slate-600">
+                    <li>Mouse movements and keyboard interactions expire after 5 mins of inactivity.</li>
+                    <li>Switching away to another tab is flagged after a 5-second grace period.</li>
+                    <li>Focusing on another OS window is flagged after a 10-second grace period.</li>
+                    <li>Camera hardware state is checked locally without video transmission or facial recognition.</li>
                   </ul>
                 </div>
               </div>
             </div>
 
-            {/* Quick Testing Bar */}
-            <div className="mt-8 pt-4 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3">
-              <span className="text-xs text-slate-400">PoC Test Controls:</span>
+            {/* Quick Testing Controls */}
+            <div className="mt-8 pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
+              <span className="text-xs text-slate-500">PoC Simulation Controls:</span>
               <button
                 onClick={handleToggleFastIdle}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/20 transition"
+                className="pressable-sm px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200"
               >
-                {isFastIdle ? "🔄 Reset to 5m Normal Idle" : "⚡ Test 10s Fast Idle"}
+                {isFastIdle ? "Reset to 5m Normal Idle" : "Trigger 10s Fast Idle"}
               </button>
             </div>
           </div>
         </div>
 
-        {/* Right Sidebar: Camera Preview & Identity Switcher */}
+        {/* Right Sidebar on Pure White Cards */}
         <div className="w-full lg:w-80 flex flex-col gap-4">
           {/* Google Meet Mode Card */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
-            <div className="flex items-center justify-between text-xs font-semibold uppercase text-slate-400 mb-2">
+          <div className="bg-white border border-slate-200/90 rounded-xl p-5 shadow-xs">
+            <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-2">
               <span className="flex items-center gap-1.5">
-                <Video className="w-3.5 h-3.5 text-blue-400" />
+                <Video className="w-3.5 h-3.5 text-blue-600" />
                 Google Meet Mode
               </span>
-              <span className="text-emerald-400 font-mono text-[11px]">Ready 🟢</span>
+              <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 font-mono text-[11px]">Ready</span>
             </div>
-            <p className="text-xs text-slate-300 leading-relaxed mb-3">
-              Attending lecture on Google Meet? Open your call tab and our Companion Extension will track your attentiveness, camera state, and focus alerts directly inside Meet.
+            <p className="text-xs text-slate-600 leading-relaxed mb-3">
+              Attending lecture in Google Meet? Open your meeting tab and our Companion Extension will report telemetry directly from Meet.
             </p>
             <a
               href="https://meet.google.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white transition shadow-sm"
+              className="pressable w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold bg-[#0a152d] hover:bg-[#132347] text-white shadow-sm"
             >
-              <Video className="w-3.5 h-3.5" />
-              <span>Launch Google Meet Call ↗</span>
+              <Video className="w-3.5 h-3.5 text-blue-400" />
+              <span>Launch Google Meet ↗</span>
             </a>
           </div>
 
           {/* Camera Card */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
-            <div className="flex items-center justify-between text-xs font-semibold uppercase text-slate-400 mb-3">
-              <span>Your Webcam</span>
-              <span className={isCameraOn ? "text-emerald-400" : "text-slate-500"}>
+          <div className="bg-white border border-slate-200/90 rounded-xl p-5 shadow-xs">
+            <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-3">
+              <span>Webcam Monitor</span>
+              <span className={isCameraOn ? "text-emerald-700 font-semibold" : "text-slate-400"}>
                 {isCameraOn ? "Camera ON" : "Camera OFF"}
               </span>
             </div>
 
-            <div className="aspect-video bg-slate-950 rounded-xl overflow-hidden border border-slate-800 flex items-center justify-center relative">
+            <div className="aspect-video bg-slate-900 rounded-xl overflow-hidden border border-slate-200 flex items-center justify-center relative">
               <video
                 ref={videoRef}
                 autoPlay
@@ -383,30 +384,30 @@ export default function StudentClassroomPage({ params }: { params: Promise<{ ses
               />
               {!isCameraOn && (
                 <div className="text-center p-4">
-                  <VideoOff className="w-8 h-8 text-slate-600 mx-auto mb-2" />
-                  <p className="text-xs text-slate-500">Camera is currently disabled</p>
+                  <VideoOff className="w-7 h-7 text-slate-500 mx-auto mb-2" />
+                  <p className="text-xs text-slate-400">Camera preview disabled</p>
                 </div>
               )}
             </div>
 
             <button
               onClick={handleToggleCamera}
-              className={`w-full mt-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition ${
+              className={`pressable w-full mt-3 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition ${
                 isCameraOn
-                  ? "bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30"
-                  : "bg-blue-600 hover:bg-blue-500 text-white"
+                  ? "bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200"
+                  : "bg-[#0a152d] hover:bg-[#132347] text-white shadow-sm"
               }`}
             >
-              {isCameraOn ? <VideoOff className="w-4 h-4" /> : <Video className="w-4 h-4" />}
+              {isCameraOn ? <VideoOff className="w-3.5 h-3.5" /> : <Video className="w-3.5 h-3.5" />}
               {isCameraOn ? "Turn Camera OFF" : "Turn Camera ON"}
             </button>
           </div>
 
           {/* Switch Student Persona for Multi-Student Testing */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
-            <h3 className="text-xs font-semibold uppercase text-slate-400 mb-3">Test Multi-Student Persona</h3>
-            <p className="text-xs text-slate-400 mb-3">
-              Switch persona to test seeing multiple distinct student cards on the Teacher Dashboard:
+          <div className="bg-white border border-slate-200/90 rounded-xl p-5 shadow-xs">
+            <h3 className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-2">Persona Simulation</h3>
+            <p className="text-xs text-slate-500 mb-3">
+              Switch identity to simulate multiple concurrent students on the Teacher Dashboard:
             </p>
             <div className="space-y-2">
               <button
@@ -414,10 +415,10 @@ export default function StudentClassroomPage({ params }: { params: Promise<{ ses
                   setStudentId("alex-chen-uuid");
                   setStudentName("Alex Chen");
                 }}
-                className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium border transition ${
+                className={`pressable w-full text-left px-3 py-2 rounded-lg text-xs font-semibold border transition ${
                   studentName === "Alex Chen"
-                    ? "bg-blue-600/20 border-blue-500/50 text-blue-300"
-                    : "bg-slate-800/50 border-slate-800 text-slate-400 hover:bg-slate-800"
+                    ? "bg-blue-50 border-blue-400 text-blue-900"
+                    : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
                 }`}
               >
                 Alex Chen (Student 1)
@@ -427,10 +428,10 @@ export default function StudentClassroomPage({ params }: { params: Promise<{ ses
                   setStudentId("beatrice-davis-uuid");
                   setStudentName("Beatrice Davis");
                 }}
-                className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium border transition ${
+                className={`pressable w-full text-left px-3 py-2 rounded-lg text-xs font-semibold border transition ${
                   studentName === "Beatrice Davis"
-                    ? "bg-blue-600/20 border-blue-500/50 text-blue-300"
-                    : "bg-slate-800/50 border-slate-800 text-slate-400 hover:bg-slate-800"
+                    ? "bg-blue-50 border-blue-400 text-blue-900"
+                    : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
                 }`}
               >
                 Beatrice Davis (Student 2)
