@@ -21,17 +21,25 @@ document.addEventListener("DOMContentLoaded", () => {
         currentStudentId = response.config.studentId;
         studentNameInput.value = response.config.studentName || "";
         sessionIdInput.value = response.config.sessionId || "live-demo-session";
-        wsBaseUrlInput.value = (response.config.wsBaseUrl || "ws://127.0.0.1:8000/ws/session").replace("//localhost:", "//127.0.0.1:");
+        wsBaseUrlInput.value = (response.config.wsBaseUrl || "wss://hope-wesley-strategic-generated.trycloudflare.com/ws/session").replace("//localhost:", "//127.0.0.1:");
       }
 
       if (response.currentStatus) {
-        hudStatus.textContent = `🟢 ${response.currentStatus}`;
-        if (response.currentStatus === "IDLE") {
-          hudStatus.textContent = "🟡 IDLE";
+        if (response.currentStatus === "ACTIVE") {
+          hudStatus.innerHTML = '<span class="dot active"></span> Active';
+          hudStatus.style.color = "#10b981";
+        } else if (response.currentStatus === "IDLE") {
+          hudStatus.innerHTML = '<span class="dot idle"></span> Idle (> 5m)';
           hudStatus.style.color = "#f59e0b";
-        } else if (response.currentStatus === "TAB_AWAY" || response.currentStatus === "WINDOW_UNFOCUSED") {
-          hudStatus.textContent = "🔴 AWAY";
-          hudStatus.style.color = "#ef4444";
+        } else if (response.currentStatus === "TAB_AWAY") {
+          hudStatus.innerHTML = '<span class="dot away"></span> Tab Away';
+          hudStatus.style.color = "#f43f5e";
+        } else if (response.currentStatus === "WINDOW_UNFOCUSED") {
+          hudStatus.innerHTML = '<span class="dot away"></span> Window Blur';
+          hudStatus.style.color = "#f43f5e";
+        } else {
+          hudStatus.innerHTML = `<span class="dot active"></span> ${response.currentStatus}`;
+          hudStatus.style.color = "#10b981";
         }
       }
 
@@ -40,13 +48,14 @@ document.addEventListener("DOMContentLoaded", () => {
         meetStatus.style.color = "#10b981";
       } else {
         meetStatus.textContent = "Ready";
+        meetStatus.style.color = "#60a5fa";
       }
 
       if (response.isSocketConnected) {
-        wsStatus.textContent = "Connected 🟢";
+        wsStatus.innerHTML = '<span class="dot active"></span> Connected';
         wsStatus.style.color = "#10b981";
       } else {
-        wsStatus.textContent = "Offline / Connecting";
+        wsStatus.innerHTML = '<span class="dot offline"></span> Offline';
         wsStatus.style.color = "#94a3b8";
       }
     }
@@ -58,7 +67,7 @@ document.addEventListener("DOMContentLoaded", () => {
       studentId: currentStudentId || ("stu-" + Math.random().toString(36).substring(2, 10)),
       studentName: studentNameInput.value.trim() || ("Student-" + Math.floor(100 + Math.random() * 900)),
       sessionId: sessionIdInput.value.trim() || "live-demo-session",
-      wsBaseUrl: (wsBaseUrlInput.value.trim() || "ws://127.0.0.1:8000/ws/session").replace("//localhost:", "//127.0.0.1:"),
+      wsBaseUrl: (wsBaseUrlInput.value.trim() || "wss://hope-wesley-strategic-generated.trycloudflare.com/ws/session").replace("//localhost:", "//127.0.0.1:"),
     };
 
     chrome.runtime.sendMessage({ type: "SYNC_CONFIG", config }, () => {
@@ -80,4 +89,3 @@ document.addEventListener("DOMContentLoaded", () => {
     chrome.tabs.create({ url: `http://localhost:3000/classroom/${session}` });
   });
 });
-
