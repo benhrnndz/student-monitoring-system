@@ -58,25 +58,24 @@
   }
 
   // Observe DOM changes on Google Meet to detect button state changes
-  const meetObserver = new MutationObserver(() => {
+  const observer = new MutationObserver(() => {
     checkMeetCameraState();
   });
 
-  meetObserver.observe(document.documentElement, {
+  observer.observe(document.documentElement, {
     childList: true,
     subtree: true,
     attributes: true,
-    attributeFilter: ["aria-label", "data-is-muted"],
+    attributeFilter: ["aria-label", "data-is-muted", "class"],
   });
 
+  // Initial check
+  checkMeetCameraState();
+
   // -------------------------------------------------------------
-  // 3. Activity Tracker inside Meet (Resets Idle Timer)
+  // 3. User Activity inside Meet (Mouse / Keyboard Activity)
   // -------------------------------------------------------------
-  let activityThrottle = false;
   function handleMeetInteraction() {
-    if (activityThrottle) return;
-    activityThrottle = true;
-    setTimeout(() => (activityThrottle = false), 2000);
     chrome.runtime.sendMessage({ type: "MEET_USER_ACTIVITY" });
   }
 
@@ -98,26 +97,26 @@
     hudContainer.style.bottom = "84px";
     hudContainer.style.left = "20px";
     hudContainer.style.zIndex = "999999";
-    hudContainer.style.fontFamily = "-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif";
-    hudContainer.style.fontSize = "12px";
-    hudContainer.style.padding = "6px 12px";
-    hudContainer.style.borderRadius = "20px";
-    hudContainer.style.backgroundColor = "rgba(15, 23, 42, 0.85)";
+    hudContainer.style.fontFamily = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    hudContainer.style.fontSize = "11px";
+    hudContainer.style.padding = "6px 14px";
+    hudContainer.style.borderRadius = "9999px";
+    hudContainer.style.backgroundColor = "rgba(255, 255, 255, 0.95)";
     hudContainer.style.backdropFilter = "blur(8px)";
-    hudContainer.style.border = "1px solid rgba(56, 189, 248, 0.3)";
-    hudContainer.style.color = "#f8fafc";
+    hudContainer.style.border = "1px solid rgba(15, 23, 42, 0.12)";
+    hudContainer.style.color = "#0a152d";
     hudContainer.style.display = "flex";
     hudContainer.style.alignItems = "center";
     hudContainer.style.gap = "8px";
-    hudContainer.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.3)";
+    hudContainer.style.boxShadow = "0 4px 16px rgba(0, 0, 0, 0.12)";
     hudContainer.style.userSelect = "none";
     hudContainer.style.cursor = "pointer";
-    hudContainer.title = "Student Learning Monitor (Zero Biometrics Active)";
+    hudContainer.title = "ClassPulse Companion (Zero Biometrics Active)";
 
     hudContainer.innerHTML = `
-      <span id="lm-hud-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></span>
-      <span style="font-weight: 600; color: #38bdf8;">Class Monitor:</span>
-      <span id="lm-hud-status" style="color: #10b981; font-weight: 600;">ACTIVE</span>
+      <span id="lm-hud-dot" style="width: 6px; height: 6px; border-radius: 9999px; background: #10b981; display: inline-block;"></span>
+      <span style="font-weight: 700; color: #475569; letter-spacing: 0.3px; text-transform: uppercase; font-size: 10px;">Monitor:</span>
+      <span id="lm-hud-status" style="color: #047857; font-weight: 700;">ACTIVE</span>
     `;
 
     document.body.appendChild(hudContainer);
@@ -131,15 +130,15 @@
 
     if (status === "ACTIVE") {
       dot.style.background = "#10b981";
-      statusText.style.color = "#10b981";
+      statusText.style.color = "#047857";
       statusText.textContent = "ACTIVE";
     } else if (status === "IDLE") {
       dot.style.background = "#f59e0b";
-      statusText.style.color = "#f59e0b";
+      statusText.style.color = "#b45309";
       statusText.textContent = "IDLE";
     } else if (status === "TAB_AWAY" || status === "WINDOW_UNFOCUSED") {
-      dot.style.background = "#ef4444";
-      statusText.style.color = "#ef4444";
+      dot.style.background = "#f43f5e";
+      statusText.style.color = "#be123c";
       statusText.textContent = "AWAY";
     }
   }
@@ -155,7 +154,6 @@
   // 5. In-Meeting Focus Nudge Modal (Alert from Professor)
   // -------------------------------------------------------------
   function showInMeetingNudge(message) {
-    // Remove existing nudge if any
     const existing = document.getElementById("learning-monitor-nudge-modal");
     if (existing) existing.remove();
 
@@ -166,25 +164,24 @@
     modal.style.left = "50%";
     modal.style.transform = "translateX(-50%)";
     modal.style.zIndex = "1000000";
-    modal.style.width = "420px";
+    modal.style.width = "400px";
     modal.style.maxWidth = "90vw";
-    modal.style.backgroundColor = "#0f172a";
-    modal.style.border = "2px solid #3b82f6";
-    modal.style.borderRadius = "16px";
-    modal.style.boxShadow = "0 20px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(59, 130, 246, 0.4)";
-    modal.style.padding = "18px";
-    modal.style.color = "#f8fafc";
-    modal.style.fontFamily = "-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif";
+    modal.style.backgroundColor = "#ffffff";
+    modal.style.border = "1px solid #cbd5e1";
+    modal.style.borderRadius = "14px";
+    modal.style.boxShadow = "0 20px 45px rgba(0, 0, 0, 0.2)";
+    modal.style.padding = "16px";
+    modal.style.color = "#0f172a";
+    modal.style.fontFamily = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     modal.style.display = "flex";
     modal.style.flexDirection = "column";
     modal.style.gap = "12px";
-    modal.style.animation = "lmSlideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1)";
+    modal.style.animation = "lmSlideDown 0.25s cubic-bezier(0.16, 1, 0.3, 1)";
 
-    // Style animation
     const styleTag = document.createElement("style");
     styleTag.textContent = `
       @keyframes lmSlideDown {
-        from { opacity: 0; transform: translate(-50%, -20px); }
+        from { opacity: 0; transform: translate(-50%, -16px); }
         to { opacity: 1; transform: translate(-50%, 0); }
       }
     `;
@@ -192,20 +189,20 @@
 
     modal.innerHTML += `
       <div style="display: flex; align-items: center; gap: 10px;">
-        <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(59, 130, 246, 0.2); display: flex; align-items: center; justify-content: center; font-size: 18px;">
-          🔔
+        <div style="width: 32px; height: 32px; border-radius: 8px; background: #0a152d; display: flex; align-items: center; justify-content: center; color: #ffffff; font-weight: 700; font-size: 13px;">
+          CP
         </div>
         <div>
-          <div style="font-weight: 700; font-size: 14px; color: #60a5fa;">Instructor Focus Check-In</div>
-          <div style="font-size: 11px; color: #94a3b8;">Classroom Engagement Prompt</div>
+          <div style="font-weight: 700; font-size: 13px; color: #0a152d;">Instructor Focus Check-In</div>
+          <div style="font-size: 11px; color: #64748b;">Classroom Engagement Prompt</div>
         </div>
       </div>
-      <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #e2e8f0; background: rgba(30, 41, 59, 0.6); padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(51, 65, 85, 0.8);">
-        "${message || "Your instructor is checking on your engagement. Please refocus on class!"}"
+      <p style="margin: 0; font-size: 12px; line-height: 1.5; color: #334155; background: #f8fafc; padding: 10px 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+        "${message || "Your instructor noticed you stepped away. Please refocus on class!"}"
       </p>
-      <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px;">
-        <button id="lm-nudge-ack-btn" style="background: #2563eb; color: #ffffff; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600; font-size: 12px; cursor: pointer; transition: background 0.2s;">
-          ✓ I'm Listening & Focused
+      <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 2px;">
+        <button id="lm-nudge-ack-btn" style="background: #0a152d; color: #ffffff; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600; font-size: 12px; cursor: pointer; transition: background 0.15s, transform 0.12s;">
+          I'm Back & Attentive
         </button>
       </div>
     `;
@@ -214,11 +211,17 @@
 
     const ackBtn = document.getElementById("lm-nudge-ack-btn");
     if (ackBtn) {
+      ackBtn.addEventListener("mousedown", () => {
+        ackBtn.style.transform = "scale(0.97)";
+      });
+      ackBtn.addEventListener("mouseup", () => {
+        ackBtn.style.transform = "scale(1)";
+      });
       ackBtn.addEventListener("click", () => {
         chrome.runtime.sendMessage({ type: "ACKNOWLEDGE_NUDGE" });
         modal.style.opacity = "0";
-        modal.style.transition = "opacity 0.2s";
-        setTimeout(() => modal.remove(), 200);
+        modal.style.transition = "opacity 0.15s";
+        setTimeout(() => modal.remove(), 150);
         updateHudStatus("ACTIVE");
       });
     }
@@ -236,4 +239,3 @@
     }
   });
 })();
-
