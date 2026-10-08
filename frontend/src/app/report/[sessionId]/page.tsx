@@ -16,6 +16,7 @@ import {
   FileText,
   Loader2,
   Check,
+  Calendar,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -120,13 +121,21 @@ export default function SessionReportPage({ params }: { params: Promise<{ sessio
 
       {/* Top Navigation & Export Triggers */}
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <Link
-          href="/teacher"
-          className="pressable flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-[#0a152d] transition"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Live Dashboard
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/teacher?tab=history"
+            className="pressable flex items-center gap-2 text-xs font-semibold text-slate-700 hover:text-[#0a152d] transition bg-white px-3 py-2 rounded-xl border border-slate-200 shadow-2xs"
+          >
+            <ArrowLeft className="w-4 h-4 text-slate-500" />
+            <span>Back to All Session Dates</span>
+          </Link>
+          <Link
+            href="/teacher"
+            className="pressable flex items-center gap-2 text-xs font-semibold text-slate-500 hover:text-slate-800 transition"
+          >
+            Live Dashboard
+          </Link>
+        </div>
 
         {/* Export Controls */}
         <div className="flex items-center gap-2.5">
@@ -161,20 +170,45 @@ export default function SessionReportPage({ params }: { params: Promise<{ sessio
       </div>
 
       {/* Hero Session Summary Card: Pure White with Dark Blue Metrics */}
-      <div className="bg-white border border-slate-200/90 rounded-xl p-6 shadow-xs">
+      <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs">
+        {/* Prominent Session Date Header Banner */}
+        <div className="flex flex-wrap items-center justify-between gap-4 pb-4 mb-4 border-b border-slate-100">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-blue-50 border border-blue-200 flex flex-col items-center justify-center shrink-0">
+              <span className="text-[10px] font-bold text-blue-700 uppercase">
+                {report.startTime ? new Date(report.startTime).toLocaleString("en-US", { month: "short" }) : "DATE"}
+              </span>
+              <span className="text-base font-black text-[#0a152d] font-mono leading-none">
+                {report.startTime ? new Date(report.startTime).getDate() : "--"}
+              </span>
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-[#0a152d] flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-blue-600" />
+                  {report.startTime ? new Date(report.startTime).toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" }) : "Session Date Recorded"}
+                </span>
+                <span className="text-xs text-slate-300">•</span>
+                <span className="text-xs text-slate-500 font-mono">
+                  {report.startTime ? new Date(report.startTime).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }) : ""}
+                  {report.endTime ? ` – ${new Date(report.endTime).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}` : ""}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Classroom: {report.classroomName || "Computer Science 101 - Algorithms"} • Code: <span className="font-mono font-semibold text-slate-700">{report.joinCode || "CS101A"}</span>
+              </p>
+            </div>
+          </div>
+
+          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+            {report.status === "completed" ? "Verified Concluded Session" : "Live Session Snapshot"}
+          </span>
+        </div>
+
         <div className="flex flex-wrap items-start justify-between gap-6">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-                {report.status === "completed" ? "Concluded Session" : "Active Session Snapshot"}
-              </span>
-              <span className="text-xs text-slate-500 font-mono">ID: {report.sessionId}</span>
-            </div>
-            <h1 className="text-2xl font-bold text-[#0a152d] mt-2.5 tracking-tight">{report.title}</h1>
-            <p className="text-xs text-slate-500 mt-1">
-              Started: {report.startTime ? new Date(report.startTime).toLocaleString() : "N/A"}
-              {report.endTime && ` • Ended: ${new Date(report.endTime).toLocaleString()}`}
-            </p>
+            <span className="text-xs text-slate-400 font-mono">Session ID: {report.sessionId}</span>
+            <h1 className="text-2xl font-bold text-[#0a152d] mt-1 tracking-tight">{report.title}</h1>
           </div>
 
           {/* Quick Metrics Grid */}
@@ -201,6 +235,7 @@ export default function SessionReportPage({ params }: { params: Promise<{ sessio
           </div>
         </div>
       </div>
+
 
       {/* Filter and Search Bar */}
       <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-3 rounded-xl border border-slate-200/90 shadow-xs">
