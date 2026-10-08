@@ -11,14 +11,6 @@ A **privacy-first, real-time learning telemetry system** for online classrooms t
 
 ---
 
-## 📌 GitHub Repository Description
-
-> **Privacy-first, real-time telemetry system for online classrooms. Tracks student engagement, inactivity, tab switching, and window focus without biometric surveillance or video streaming.**
-
-*(Character count: 198 — ideal for GitHub's repository "About" field)*
-
----
-
 ## 📑 Table of Contents
 - [Key Features](#-key-features)
 - [Telemetry & Detection Rules](#-telemetry--detection-rules)
