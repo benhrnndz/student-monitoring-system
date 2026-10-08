@@ -21,7 +21,7 @@ document.addEventListener("DOMContentLoaded", () => {
         currentStudentId = response.config.studentId;
         studentNameInput.value = response.config.studentName || "";
         sessionIdInput.value = response.config.sessionId || "live-demo-session";
-        wsBaseUrlInput.value = (response.config.wsBaseUrl || "wss://hope-wesley-strategic-generated.trycloudflare.com/ws/session").replace("//localhost:", "//127.0.0.1:");
+        wsBaseUrlInput.value = (response.config.wsBaseUrl || "wss://purchasing-comparative-africa-posted.trycloudflare.com/ws/session").replace("//localhost:", "//127.0.0.1:");
       }
 
       if (response.currentStatus) {
@@ -67,7 +67,7 @@ document.addEventListener("DOMContentLoaded", () => {
       studentId: currentStudentId || ("stu-" + Math.random().toString(36).substring(2, 10)),
       studentName: studentNameInput.value.trim() || ("Student-" + Math.floor(100 + Math.random() * 900)),
       sessionId: sessionIdInput.value.trim() || "live-demo-session",
-      wsBaseUrl: (wsBaseUrlInput.value.trim() || "wss://hope-wesley-strategic-generated.trycloudflare.com/ws/session").replace("//localhost:", "//127.0.0.1:"),
+      wsBaseUrl: (wsBaseUrlInput.value.trim() || "wss://purchasing-comparative-africa-posted.trycloudflare.com/ws/session").replace("//localhost:", "//127.0.0.1:"),
     };
 
     chrome.runtime.sendMessage({ type: "SYNC_CONFIG", config }, () => {
