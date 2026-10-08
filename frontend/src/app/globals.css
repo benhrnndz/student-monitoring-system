@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #f8fafc;
   --surface: #ffffff;
@@ -12,6 +14,20 @@
   --navy-header: #0a152d;
   --navy-accent: #1e293b;
   --accent-blue: #2563eb;
+}
+
+.dark {
+  --background: #060b18;
+  --surface: #0b1328;
+  --surface-muted: #101c38;
+  --foreground: #f8fafc;
+  --foreground-muted: #94a3b8;
+  --subtle: #64748b;
+  --border-subtle: #1e293b;
+  --border-active: #3b82f6;
+  --navy-header: #060b18;
+  --navy-accent: #0f1a36;
+  --accent-blue: #3b82f6;
 }
 
 body {
@@ -30,6 +46,11 @@ body {
   color: #ffffff;
 }
 
+.dark ::selection {
+  background-color: #2563eb;
+  color: #ffffff;
+}
+
 /* Themed Light Scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
@@ -37,7 +58,7 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #f8fafc;
+  background: var(--background);
 }
 
 ::-webkit-scrollbar-thumb {
@@ -45,8 +66,16 @@ body {
   border-radius: 9999px;
 }
 
+.dark ::-webkit-scrollbar-thumb {
+  background: #1e293b;
+}
+
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #334155;
 }
 
 /* Emil Kowalski Tactile Physics */
