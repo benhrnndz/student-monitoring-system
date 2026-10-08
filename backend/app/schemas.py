@@ -42,6 +42,10 @@ class SessionCreate(BaseModel):
     classroom_id: str
     title: str
 
+class SessionStartRequest(BaseModel):
+    title: Optional[str] = None
+    classroom_id: Optional[str] = None
+
 class SessionResponse(BaseModel):
     id: str
     classroom_id: str
@@ -53,6 +57,21 @@ class SessionResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class SessionSummaryItem(BaseModel):
+    id: str
+    classroom_id: str
+    classroom_name: str
+    join_code: str
+    title: str
+    status: str
+    start_time: Optional[datetime] = None
+    end_time: Optional[datetime] = None
+    created_at: Optional[datetime] = None
+    total_students: int
+    avg_engagement: float
+    duration_seconds: int
+    duration_formatted: str
 
 # --- WebSocket Message Schemas ---
 class WSMessage(BaseModel):
