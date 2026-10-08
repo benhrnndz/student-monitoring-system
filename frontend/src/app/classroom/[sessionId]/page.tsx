@@ -14,6 +14,7 @@ import {
   EyeOff
 } from "lucide-react";
 import Link from "next/link";
+import ThemeToggle from "@/components/ThemeToggle";
 
 export default function StudentClassroomPage({ params }: { params: Promise<{ sessionId: string }> }) {
   const resolvedParams = use(params);
@@ -223,9 +224,9 @@ export default function StudentClassroomPage({ params }: { params: Promise<{ ses
   }
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col selection:bg-[#0a152d] selection:text-white">
+    <div className="min-h-screen bg-[#f8fafc] dark:bg-[#060b18] text-slate-900 dark:text-slate-100 flex flex-col selection:bg-[#0a152d] dark:selection:bg-blue-600 selection:text-white">
       {/* Top Banner: Dark Blue Grounding */}
-      <header className="bg-[#0a152d] text-white px-6 py-3.5 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-20 shadow-sm">
+      <header className="bg-[#0a152d] text-white px-6 py-3.5 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-20 shadow-sm border-b border-white/10">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center font-bold text-white text-xs tracking-wider shadow-sm">
             CS
@@ -257,21 +258,26 @@ export default function StudentClassroomPage({ params }: { params: Promise<{ ses
             <ShieldCheck className={`w-4 h-4 ${isExtensionAttached ? "text-emerald-400" : "text-slate-400"}`} />
             <span className="hidden md:inline">{isExtensionAttached ? "Extension Verified" : "Web Only"}</span>
           </div>
+
+          {/* Theme Toggle Button */}
+          <div className="pl-2 border-l border-white/15">
+            <ThemeToggle variant="header" />
+          </div>
         </div>
       </header>
 
-      {/* Focus Check-In Modal: Pure White Card */}
+      {/* Focus Check-In Modal */}
       {nudgeMessage && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-2xl p-6 max-w-md w-full shadow-2xl text-center">
-            <div className="w-12 h-12 bg-blue-50 text-blue-600 border border-blue-200 rounded-full flex items-center justify-center mx-auto mb-4">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#0b1328] border border-slate-200 dark:border-white/10 rounded-2xl p-6 max-w-md w-full shadow-2xl text-center">
+            <div className="w-12 h-12 bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800/60 rounded-full flex items-center justify-center mx-auto mb-4">
               <Bell className="w-5 h-5 animate-pulse" />
             </div>
-            <h2 className="text-lg font-bold text-[#0a152d]">Focus Check-In</h2>
-            <p className="text-sm text-slate-600 mt-2 leading-relaxed">{nudgeMessage}</p>
+            <h2 className="text-lg font-bold text-[#0a152d] dark:text-white">Focus Check-In</h2>
+            <p className="text-sm text-slate-600 dark:text-slate-300 mt-2 leading-relaxed">{nudgeMessage}</p>
             <button
               onClick={handleDismissNudge}
-              className="pressable mt-6 w-full py-2.5 rounded-xl bg-[#0a152d] hover:bg-[#132347] text-white font-semibold text-sm shadow-sm"
+              className="pressable mt-6 w-full py-2.5 rounded-xl bg-[#0a152d] dark:bg-blue-600 hover:bg-[#132347] dark:hover:bg-blue-500 text-white font-semibold text-sm shadow-sm"
             >
               I am here & attentive!
             </button>
@@ -281,29 +287,29 @@ export default function StudentClassroomPage({ params }: { params: Promise<{ ses
 
       {/* Main Classroom Area */}
       <div className="flex-1 p-6 flex flex-col lg:flex-row gap-6 max-w-7xl mx-auto w-full">
-        {/* Left: Lecture Content on Pure White Surface */}
+        {/* Left: Lecture Content */}
         <div className="flex-1 flex flex-col gap-4">
-          <div className="bg-white border border-slate-200/90 rounded-xl p-6 relative overflow-hidden flex-1 flex flex-col justify-between shadow-xs">
+          <div className="bg-white dark:bg-[#0b1328] border border-slate-200/90 dark:border-white/10 rounded-xl p-6 relative overflow-hidden flex-1 flex flex-col justify-between shadow-xs">
             <div>
-              <div className="flex items-center justify-between text-xs text-slate-500 pb-4 border-b border-slate-100">
-                <span className="flex items-center gap-1.5 font-medium text-slate-700">
-                  <BookOpen className="w-4 h-4 text-blue-600" />
+              <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 pb-4 border-b border-slate-100 dark:border-white/10">
+                <span className="flex items-center gap-1.5 font-medium text-slate-700 dark:text-slate-200">
+                  <BookOpen className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                   Lecture Notes & Interactive Material
                 </span>
-                <span className="font-mono text-emerald-700 font-semibold bg-emerald-50 px-2.5 py-0.5 rounded border border-emerald-200 text-xs">
+                <span className="font-mono text-emerald-700 dark:text-emerald-300 font-semibold bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800/50 text-xs">
                   Active Telemetry Feed
                 </span>
               </div>
 
               <div className="mt-6 space-y-4">
-                <h2 className="text-2xl font-bold text-[#0a152d] tracking-tight">
+                <h2 className="text-2xl font-bold text-[#0a152d] dark:text-white tracking-tight">
                   High-Throughput Telemetry in Distributed Classrooms
                 </h2>
-                <p className="text-sm text-slate-600 leading-relaxed">
+                <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
                   WebSocket gateways maintain sub-second state synchronization across hundreds of distributed student clients, propagating tab focus and idle status securely.
                 </p>
 
-                <div className="bg-slate-900 p-4 rounded-xl font-mono text-xs text-blue-300 leading-relaxed shadow-xs">
+                <div className="bg-slate-900 dark:bg-[#060b18] p-4 rounded-xl font-mono text-xs text-blue-300 leading-relaxed shadow-xs border border-slate-800 dark:border-white/10">
                   <code>
                     // Real-Time Event Dispatch<br />
                     socket.send(JSON.stringify(&#123;<br />
@@ -315,9 +321,9 @@ export default function StudentClassroomPage({ params }: { params: Promise<{ ses
                   </code>
                 </div>
 
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-600">
-                  <h3 className="font-semibold text-[#0a152d] mb-2">Non-Intrusive Privacy Guarantees</h3>
-                  <ul className="list-disc list-inside space-y-1.5 text-slate-600">
+                <div className="p-4 bg-slate-50 dark:bg-[#0e172e] rounded-xl border border-slate-200 dark:border-white/10 text-xs text-slate-600 dark:text-slate-300">
+                  <h3 className="font-semibold text-[#0a152d] dark:text-white mb-2">Non-Intrusive Privacy Guarantees</h3>
+                  <ul className="list-disc list-inside space-y-1.5 text-slate-600 dark:text-slate-300">
                     <li>Mouse movements and keyboard interactions expire after 5 mins of inactivity.</li>
                     <li>Switching away to another tab is flagged after a 5-second grace period.</li>
                     <li>Focusing on another OS window is flagged after a 10-second grace period.</li>
@@ -328,11 +334,11 @@ export default function StudentClassroomPage({ params }: { params: Promise<{ ses
             </div>
 
             {/* Quick Testing Controls */}
-            <div className="mt-8 pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
-              <span className="text-xs text-slate-500">PoC Simulation Controls:</span>
+            <div className="mt-8 pt-4 border-t border-slate-100 dark:border-white/10 flex flex-wrap items-center justify-between gap-3">
+              <span className="text-xs text-slate-500 dark:text-slate-400">PoC Simulation Controls:</span>
               <button
                 onClick={handleToggleFastIdle}
-                className="pressable-sm px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200"
+                className="pressable-sm px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/50 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60"
               >
                 {isFastIdle ? "Reset to 5m Normal Idle" : "Trigger 10s Fast Idle"}
               </button>
@@ -340,41 +346,41 @@ export default function StudentClassroomPage({ params }: { params: Promise<{ ses
           </div>
         </div>
 
-        {/* Right Sidebar on Pure White Cards */}
+        {/* Right Sidebar */}
         <div className="w-full lg:w-80 flex flex-col gap-4">
           {/* Google Meet Mode Card */}
-          <div className="bg-white border border-slate-200/90 rounded-xl p-5 shadow-xs">
-            <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-2">
+          <div className="bg-white dark:bg-[#0b1328] border border-slate-200/90 dark:border-white/10 rounded-xl p-5 shadow-xs">
+            <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
               <span className="flex items-center gap-1.5">
-                <Video className="w-3.5 h-3.5 text-blue-600" />
+                <Video className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                 Google Meet Mode
               </span>
-              <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 font-mono text-[11px]">Ready</span>
+              <span className="text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800/50 font-mono text-[11px]">Ready</span>
             </div>
-            <p className="text-xs text-slate-600 leading-relaxed mb-3">
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mb-3">
               Attending lecture in Google Meet? Open your meeting tab and our Companion Extension will report telemetry directly from Meet.
             </p>
             <a
               href="https://meet.google.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="pressable w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold bg-[#0a152d] hover:bg-[#132347] text-white shadow-sm"
+              className="pressable w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold bg-[#0a152d] dark:bg-blue-600 hover:bg-[#132347] dark:hover:bg-blue-500 text-white shadow-sm"
             >
-              <Video className="w-3.5 h-3.5 text-blue-400" />
+              <Video className="w-3.5 h-3.5 text-blue-400 dark:text-white" />
               <span>Launch Google Meet ↗</span>
             </a>
           </div>
 
           {/* Camera Card */}
-          <div className="bg-white border border-slate-200/90 rounded-xl p-5 shadow-xs">
-            <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-3">
+          <div className="bg-white dark:bg-[#0b1328] border border-slate-200/90 dark:border-white/10 rounded-xl p-5 shadow-xs">
+            <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3">
               <span>Webcam Monitor</span>
-              <span className={isCameraOn ? "text-emerald-700 font-semibold" : "text-slate-400"}>
+              <span className={isCameraOn ? "text-emerald-700 dark:text-emerald-300 font-semibold" : "text-slate-400"}>
                 {isCameraOn ? "Camera ON" : "Camera OFF"}
               </span>
             </div>
 
-            <div className="aspect-video bg-slate-900 rounded-xl overflow-hidden border border-slate-200 flex items-center justify-center relative">
+            <div className="aspect-video bg-slate-900 rounded-xl overflow-hidden border border-slate-200 dark:border-white/10 flex items-center justify-center relative">
               <video
                 ref={videoRef}
                 autoPlay
@@ -394,8 +400,8 @@ export default function StudentClassroomPage({ params }: { params: Promise<{ ses
               onClick={handleToggleCamera}
               className={`pressable w-full mt-3 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition ${
                 isCameraOn
-                  ? "bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200"
-                  : "bg-[#0a152d] hover:bg-[#132347] text-white shadow-sm"
+                  ? "bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/60"
+                  : "bg-[#0a152d] dark:bg-blue-600 hover:bg-[#132347] dark:hover:bg-blue-500 text-white shadow-sm"
               }`}
             >
               {isCameraOn ? <VideoOff className="w-3.5 h-3.5" /> : <Video className="w-3.5 h-3.5" />}
@@ -404,9 +410,9 @@ export default function StudentClassroomPage({ params }: { params: Promise<{ ses
           </div>
 
           {/* Switch Student Persona for Multi-Student Testing */}
-          <div className="bg-white border border-slate-200/90 rounded-xl p-5 shadow-xs">
-            <h3 className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-2">Persona Simulation</h3>
-            <p className="text-xs text-slate-500 mb-3">
+          <div className="bg-white dark:bg-[#0b1328] border border-slate-200/90 dark:border-white/10 rounded-xl p-5 shadow-xs">
+            <h3 className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Persona Simulation</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
               Switch identity to simulate multiple concurrent students on the Teacher Dashboard:
             </p>
             <div className="space-y-2">
@@ -417,8 +423,8 @@ export default function StudentClassroomPage({ params }: { params: Promise<{ ses
                 }}
                 className={`pressable w-full text-left px-3 py-2 rounded-lg text-xs font-semibold border transition ${
                   studentName === "Alex Chen"
-                    ? "bg-blue-50 border-blue-400 text-blue-900"
-                    : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                    ? "bg-blue-50 dark:bg-blue-950/50 border-blue-400 dark:border-blue-600 text-blue-900 dark:text-blue-200"
+                    : "bg-slate-50 dark:bg-[#0e172e] border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#132347]"
                 }`}
               >
                 Alex Chen (Student 1)
@@ -430,8 +436,8 @@ export default function StudentClassroomPage({ params }: { params: Promise<{ ses
                 }}
                 className={`pressable w-full text-left px-3 py-2 rounded-lg text-xs font-semibold border transition ${
                   studentName === "Beatrice Davis"
-                    ? "bg-blue-50 border-blue-400 text-blue-900"
-                    : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                    ? "bg-blue-50 dark:bg-blue-950/50 border-blue-400 dark:border-blue-600 text-blue-900 dark:text-blue-200"
+                    : "bg-slate-50 dark:bg-[#0e172e] border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#132347]"
                 }`}
               >
                 Beatrice Davis (Student 2)
