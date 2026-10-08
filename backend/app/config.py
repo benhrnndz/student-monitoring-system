@@ -1,6 +1,9 @@
 import os
+from pathlib import Path
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./learning_monitor.db")
+BASE_DIR = Path(__file__).resolve().parent.parent
+DEFAULT_DB_PATH = (BASE_DIR / "learning_monitor.db").as_posix()
+DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{DEFAULT_DB_PATH}")
 SECRET_KEY = os.getenv("SECRET_KEY", "super-secret-learning-monitoring-key-2026")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 # 24 hours
