@@ -1,12 +1,13 @@
 import csv
 import io
+import uuid
 from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from ..database import get_db
 from ..models import Session as SessionModel, Classroom, SessionAttendance, User
-from ..schemas import SessionCreate, SessionResponse
+from ..schemas import SessionCreate, SessionResponse, SessionStartRequest, SessionSummaryItem
 
 def format_duration(seconds: int) -> str:
     if seconds is None:
@@ -19,49 +20,87 @@ def format_duration(seconds: int) -> str:
         return f"{m}m {s}s"
     return f"{s}s"
 
+def safe_duration_seconds(start: Optional[datetime], end: Optional[datetime], is_live: bool = False) -> int:
+    if not start:
+        return 0
+    if not end and is_live:
+        end = datetime.now()
+    if not end:
+        return 0
+
+    s = start.replace(tzinfo=None) if start.tzinfo else start
+    e = end.replace(tzinfo=None) if end.tzinfo else end
+    return max(0, int((e - s).total_seconds()))
+
 router = APIRouter(prefix="/api/sessions", tags=["sessions"])
 
-@router.post("/", response_model=SessionResponse)
-def create_session(session_in: SessionCreate, db: Session = Depends(get_db)):
-    classroom = db.query(Classroom).filter(Classroom.id == session_in.classroom_id).first()
+@router.get("/", response_model=List[SessionSummaryItem])
+def get_all_sessions(db: Session = Depends(get_db)):
+    """Returns all sessions across dates with attendee counts and engagement scores, newest first."""
+    sessions = db.query(SessionModel).order_by(SessionModel.created_at.desc()).all()
+    results = []
+    for s in sessions:
+        classroom = db.query(Classroom).filter(Classroom.id == s.classroom_id).first()
+        attendances = db.query(SessionAttendance).filter(SessionAttendance.session_id == s.id).all()
+        
+        # Calculate duration safely
+        start = s.start_time or s.created_at
+        end = s.end_time
+        duration_sec = safe_duration_seconds(start, end, is_live=(s.status == "live"))
+
+        # Calculate average engagement
+        if attendances:
+            scores = []
+            for att in attendances:
+                tt = (
+                    att.total_active_seconds +
+                    att.total_idle_seconds +
+                    att.total_tab_away_seconds +
+                    att.total_window_away_seconds
+                )
+                score = ((att.total_active_seconds + 0.2 * att.total_idle_seconds) / tt * 100.0) if tt > 0 else 100.0
+                scores.append(score)
+            avg_eng = round(sum(scores) / len(scores), 1) if scores else 100.0
+        else:
+            avg_eng = 100.0
+
+        results.append(SessionSummaryItem(
+            id=s.id,
+            classroom_id=s.classroom_id,
+            classroom_name=classroom.name if classroom else "General Classroom",
+            join_code=classroom.join_code if classroom else "CS101A",
+            title=s.title,
+            status=s.status,
+            start_time=s.start_time,
+            end_time=s.end_time,
+            created_at=s.created_at,
+            total_students=len(attendances),
+            avg_engagement=avg_eng,
+            duration_seconds=duration_sec,
+            duration_formatted=format_duration(duration_sec)
+        ))
+    return results
+
+@router.post("/start")
+def start_live_session(req: Optional[SessionStartRequest] = None, db: Session = Depends(get_db)):
+    """Starts a brand new live session with a clean roster and fresh timer."""
+    # Ensure default teacher and classroom exist
+    teacher = db.query(User).filter(User.role == "teacher").first()
+    if not teacher:
+        teacher = User(
+            id="teacher-jenkins-uuid",
+            email="teacher@demo.com",
+            password_hash="demo",
+            full_name="Prof. Sarah Jenkins",
+            role="teacher"
+        )
+        db.add(teacher)
+        db.commit()
+
+    classroom = None
+    if req and req.classroom_id:
+        classroom = db.query(Classroom).filter(Classroom.id == req.classroom_id).first()
     if not classroom:
-        raise HTTPException(status_code=404, detail="Classroom not found")
-
-    new_session = SessionModel(
-        classroom_id=session_in.classroom_id,
-        title=session_in.title,
-        status="live" # Start as live immediately for ease of testing
-    )
-    db.add(new_session)
-    db.commit()
-    db.refresh(new_session)
-    return new_session
-
-@router.get("/classroom/{classroom_id}", response_model=List[SessionResponse])
-def get_classroom_sessions(classroom_id: str, db: Session = Depends(get_db)):
-    return db.query(SessionModel).filter(SessionModel.classroom_id == classroom_id).order_by(SessionModel.created_at.desc()).all()
-
-@router.get("/active")
-def get_active_session(db: Session = Depends(get_db)):
-    """Returns the current live session or creates an active demo session."""
-    session_obj = db.query(SessionModel).filter(SessionModel.status == "live").first()
-    if not session_obj:
-        session_obj = db.query(SessionModel).first()
-
-    # If still no session exists in DB, create one on the fly
-    if not session_obj:
-        teacher = db.query(User).filter(User.role == "teacher").first()
-        if not teacher:
-            teacher = User(
-                id="teacher-jenkins-uuid",
-                email="teacher@demo.com",
-                password_hash="demo",
-                full_name="Prof. Sarah Jenkins",
-                role="teacher"
-            )
-            db.add(teacher)
-            db.commit()
-
         classroom = db.query(Classroom).first()
         if not classroom:
             classroom = Classroom(
@@ -74,27 +113,85 @@ def get_active_session(db: Session = Depends(get_db)):
             db.add(classroom)
             db.commit()
 
-        session_obj = SessionModel(
-            id="live-demo-session",
-            classroom_id=classroom.id,
-            title="Lecture: Real-Time Telemetry & Data Structures",
-            status="live"
-        )
-        db.add(session_obj)
-        db.commit()
-        db.refresh(session_obj)
+    # Conclude any existing live session so past records are never mixed
+    active_sessions = db.query(SessionModel).filter(SessionModel.status == "live").all()
+    now = datetime.now(timezone.utc)
+    for act in active_sessions:
+        act.status = "completed"
+        act.end_time = now
+
+    session_id = f"session-{uuid.uuid4().hex[:8]}"
+    title = (req.title.strip() if req and req.title and req.title.strip() else None)
+    if not title:
+        title = f"Lecture Session - {now.strftime('%b %d, %Y (%I:%M %p)')}"
+
+    new_session = SessionModel(
+        id=session_id,
+        classroom_id=classroom.id,
+        title=title,
+        status="live",
+        start_time=now,
+        created_at=now
+    )
+    db.add(new_session)
+    db.commit()
+    db.refresh(new_session)
+
+    return {
+        "id": new_session.id,
+        "title": new_session.title,
+        "status": new_session.status,
+        "classroom_id": new_session.classroom_id,
+        "classroom_name": classroom.name,
+        "join_code": classroom.join_code,
+        "start_time": new_session.start_time.isoformat()
+    }
+
+@router.post("/", response_model=SessionResponse)
+def create_session(session_in: SessionCreate, db: Session = Depends(get_db)):
+    classroom = db.query(Classroom).filter(Classroom.id == session_in.classroom_id).first()
+    if not classroom:
+        raise HTTPException(status_code=404, detail="Classroom not found")
+
+    new_session = SessionModel(
+        classroom_id=session_in.classroom_id,
+        title=session_in.title,
+        status="live"
+    )
+    db.add(new_session)
+    db.commit()
+    db.refresh(new_session)
+    return new_session
+
+@router.get("/classroom/{classroom_id}", response_model=List[SessionResponse])
+def get_classroom_sessions(classroom_id: str, db: Session = Depends(get_db)):
+    return db.query(SessionModel).filter(SessionModel.classroom_id == classroom_id).order_by(SessionModel.created_at.desc()).all()
+
+@router.get("/active")
+def get_active_session(db: Session = Depends(get_db)):
+    """Returns the current live session, or active=False if none is live."""
+    session_obj = db.query(SessionModel).filter(SessionModel.status == "live").order_by(SessionModel.created_at.desc()).first()
+    if not session_obj:
+        return {
+            "active": False,
+            "id": None,
+            "title": None,
+            "status": None,
+            "classroom_name": None,
+            "join_code": None
+        }
 
     classroom = db.query(Classroom).filter(Classroom.id == session_obj.classroom_id).first()
     return {
+        "active": True,
         "id": session_obj.id,
         "title": session_obj.title,
         "status": session_obj.status,
         "classroom_id": session_obj.classroom_id,
         "classroom_name": classroom.name if classroom else "Classroom",
         "join_code": classroom.join_code if classroom else "CS101A",
-        "start_time": session_obj.start_time
+        "start_time": session_obj.start_time.isoformat() if session_obj.start_time else None
     }
-
 
 @router.get("/{session_id}", response_model=SessionResponse)
 def get_session(session_id: str, db: Session = Depends(get_db)):
@@ -102,6 +199,16 @@ def get_session(session_id: str, db: Session = Depends(get_db)):
     if not session_obj:
         raise HTTPException(status_code=404, detail="Session not found")
     return session_obj
+
+@router.delete("/{session_id}")
+def delete_session(session_id: str, db: Session = Depends(get_db)):
+    session_obj = db.query(SessionModel).filter(SessionModel.id == session_id).first()
+    if not session_obj:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    db.delete(session_obj)
+    db.commit()
+    return {"status": "deleted", "session_id": session_id}
 
 @router.post("/{session_id}/end")
 def end_session(session_id: str, db: Session = Depends(get_db)):
@@ -120,6 +227,7 @@ def get_session_report(session_id: str, db: Session = Depends(get_db)):
     if not session_obj:
         raise HTTPException(status_code=404, detail="Session not found")
 
+    classroom = db.query(Classroom).filter(Classroom.id == session_obj.classroom_id).first()
     attendances = db.query(SessionAttendance).filter(SessionAttendance.session_id == session_id).all()
     results = []
     for att in attendances:
@@ -142,8 +250,9 @@ def get_session_report(session_id: str, db: Session = Depends(get_db)):
         results.append({
             "studentId": att.student_id,
             "studentName": student.full_name if student else "Unknown",
-            "firstJoinedAt": att.first_joined_at,
-            "lastLeftAt": att.last_left_at,
+            "studentEmail": student.email if student else "N/A",
+            "firstJoinedAt": att.first_joined_at.isoformat() if att.first_joined_at else None,
+            "lastLeftAt": att.last_left_at.isoformat() if att.last_left_at else None,
             "totalActiveSeconds": att.total_active_seconds,
             "totalIdleSeconds": att.total_idle_seconds,
             "totalTabAwaySeconds": att.total_tab_away_seconds,
@@ -157,8 +266,10 @@ def get_session_report(session_id: str, db: Session = Depends(get_db)):
         "sessionId": session_id,
         "title": session_obj.title,
         "status": session_obj.status,
-        "startTime": session_obj.start_time,
-        "endTime": session_obj.end_time,
+        "classroomName": classroom.name if classroom else "Computer Science 101",
+        "joinCode": classroom.join_code if classroom else "CS101A",
+        "startTime": session_obj.start_time.isoformat() if session_obj.start_time else None,
+        "endTime": session_obj.end_time.isoformat() if session_obj.end_time else None,
         "totalStudents": len(results),
         "attendances": results
     }
