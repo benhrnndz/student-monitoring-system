@@ -9,7 +9,11 @@
 [![Google Meet](https://img.shields.io/badge/Integration-Google%20Meet-00832d.svg?style=flat&logo=googlemeet)](https://meet.google.com)
 [![Privacy First](https://img.shields.io/badge/Privacy-Zero%20Biometrics-green.svg?style=flat)](#-privacy--ethical-framework)
 
+<<<<<<< HEAD
 A **privacy-first, real-time classroom telemetry system** that monitors student engagement, inactivity, and external browser distractions **without invasive biometric facial AI or continuous video streaming**. Includes native **Google Meet telemetry**, **calendar-based historical session archiving**, a **universal dark/light mode**, and one-click **CSV/Excel report exports**.
+=======
+A **privacy-first, real-time learning telemetry system** for online classrooms that monitors student engagement, inactivity, and multi-tab/external browser distractions **without invasive biometric facial AI or continuous video streaming**.
+>>>>>>> 35ca4bd0685d5efa4156a54eb7c0db5ec8f7f996
 
 ---
 
