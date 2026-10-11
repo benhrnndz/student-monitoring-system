@@ -14,10 +14,9 @@ class User(Base):
     email = Column(String(255), unique=True, index=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
     full_name = Column(String(150), nullable=False)
-    role = Column(String(20), default="student", nullable=False) # "teacher", "student", "admin"
+    role = Column(String(20), default="student", nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
-    # Relationships
     taught_classrooms = relationship("Classroom", back_populates="teacher")
     enrollments = relationship("ClassroomEnrollment", back_populates="student")
     attendances = relationship("SessionAttendance", back_populates="student")
@@ -33,7 +32,6 @@ class Classroom(Base):
     teacher_id = Column(String(36), ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
-    # Relationships
     teacher = relationship("User", back_populates="taught_classrooms")
     enrollments = relationship("ClassroomEnrollment", back_populates="classroom", cascade="all, delete-orphan")
     sessions = relationship("Session", back_populates="classroom", cascade="all, delete-orphan")
@@ -57,7 +55,7 @@ class Session(Base):
     id = Column(String(36), primary_key=True, default=generate_uuid)
     classroom_id = Column(String(36), ForeignKey("classrooms.id"), nullable=False)
     title = Column(String(200), nullable=False)
-    status = Column(String(20), default="scheduled", nullable=False) # "scheduled", "live", "completed"
+    status = Column(String(20), default="scheduled", nullable=False)
     start_time = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     end_time = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
@@ -75,7 +73,6 @@ class SessionAttendance(Base):
     first_joined_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     last_left_at = Column(DateTime, nullable=True)
     
-    # Telemetry aggregate counters
     total_active_seconds = Column(Integer, default=0)
     total_idle_seconds = Column(Integer, default=0)
     total_tab_away_seconds = Column(Integer, default=0)
@@ -94,10 +91,11 @@ class TelemetryEvent(Base):
 
     id = Column(String(36), primary_key=True, default=generate_uuid)
     attendance_id = Column(String(36), ForeignKey("session_attendances.id"), nullable=False)
-    event_type = Column(String(50), nullable=False) # "IDLE", "TAB_HIDDEN", "WINDOW_BLURRED", "CAMERA_TOGGLE"
+    event_type = Column(String(50), nullable=False)
     duration_seconds = Column(Integer, default=0)
     metadata_json = Column(Text, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     attendance = relationship("SessionAttendance", back_populates="events")
+
 
