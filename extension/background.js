@@ -22,7 +22,7 @@ let config = {
   sessionId: "live-demo-session",
   studentId: "stu-" + Math.random().toString(36).substring(2, 10),
   studentName: "",
-  wsBaseUrl: "wss://purchasing-comparative-africa-posted.trycloudflare.com/ws/session",
+  wsBaseUrl: "wss://receipt-virginia-holds-dennis.trycloudflare.com/ws/session",
 };
 
 // Load saved config from chrome.storage.local with automatic localhost -> 127.0.0.1 migration
