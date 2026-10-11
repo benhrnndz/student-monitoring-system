@@ -3,8 +3,6 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { 
   Users, 
   Monitor, 
-  ShieldCheck, 
-  Video, 
   Clock, 
   AlertTriangle, 
   ArrowRight,
