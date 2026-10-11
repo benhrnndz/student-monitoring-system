@@ -6,7 +6,6 @@ from .models import User, Classroom, ClassroomEnrollment, Session as SessionMode
 from .auth_utils import hash_password
 from .routers import auth, classrooms, sessions, ws
 
-# Initialize DB tables
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
@@ -15,7 +14,6 @@ app = FastAPI(
     description="Real-time telemetry and monitoring backend for online classrooms"
 )
 
-# CORS Middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
@@ -24,7 +22,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Register API & WebSocket Routers
 app.include_router(auth.router)
 app.include_router(classrooms.router)
 app.include_router(sessions.router)
@@ -47,7 +44,6 @@ def seed_demo_data():
             db.commit()
             db.refresh(teacher)
 
-            # Sample Students
             student1 = User(
                 email="alex@demo.com",
                 password_hash=hash_password("student123"),
@@ -65,7 +61,6 @@ def seed_demo_data():
             db.refresh(student1)
             db.refresh(student2)
 
-            # Sample Classroom
             classroom = Classroom(
                 name="Computer Science 101 - Algorithms",
                 subject="Computer Science",
@@ -76,12 +71,10 @@ def seed_demo_data():
             db.commit()
             db.refresh(classroom)
 
-            # Enroll students
             e1 = ClassroomEnrollment(classroom_id=classroom.id, student_id=student1.id)
             e2 = ClassroomEnrollment(classroom_id=classroom.id, student_id=student2.id)
             db.add_all([e1, e2])
 
-            # Sample Live Session
             live_session = SessionModel(
                 classroom_id=classroom.id,
                 title="Lecture 4: Data Structures & Real-Time Telemetry",
@@ -89,7 +82,6 @@ def seed_demo_data():
             )
             db.add(live_session)
             db.commit()
-            print(">>> Demo data seeded successfully! Join Code: CS101A")
     finally:
         db.close()
 
