@@ -4,16 +4,11 @@ import React, { useEffect, useState, use } from "react";
 import { getSessionReport, SessionReport, downloadReportFile } from "@/lib/api";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import {
-  CheckCircle2,
-  Clock,
-  Video,
   ShieldCheck,
   ArrowLeft,
   Award,
   FileSpreadsheet,
-  Download,
   Search,
-  AlertTriangle,
   FileText,
   Loader2,
   Check,
