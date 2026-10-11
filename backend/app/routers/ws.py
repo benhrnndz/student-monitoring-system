@@ -51,8 +51,6 @@ async def session_websocket_endpoint(
                 except Exception as e:
                     logger.error(f"Error handling teacher message: {e}")
         else:
-            # Student Connection
-            # 1. First, connect to in-memory real-time manager so presence is INSTANT
             norm_source = source.upper() if source else "WEB"
             is_meet = "MEET" in norm_source
             await ws_manager.connect_student(
@@ -68,11 +66,9 @@ async def session_websocket_endpoint(
             )
             logger.info(f"Student {user_name} ({user_id}) joined session {session_id} via {norm_source}")
 
-            # 2. Safely ensure session & user exist in DB so FK constraints succeed
             try:
                 session_obj = db.query(SessionModel).filter(SessionModel.id == session_id).first()
                 if not session_obj:
-                    # Get or create default classroom
                     classroom = db.query(Classroom).first()
                     if not classroom:
                         classroom = Classroom(
@@ -125,10 +121,9 @@ async def session_websocket_endpoint(
                     attendance_record.extension_verified = True
                     db.commit()
             except Exception as db_err:
-                logger.error(f"DB attendance setup error (continuing in real-time mode): {db_err}")
+                logger.error(f"DB attendance setup error: {db_err}")
                 db.rollback()
 
-            # Accurate state duration tracking variables
             last_activity_time = time.time()
             current_tracked_status = "ACTIVE"
 
@@ -146,7 +141,6 @@ async def session_websocket_endpoint(
                     elif current_tracked_status == "WINDOW_UNFOCUSED":
                         attendance_record.total_window_away_seconds += delta
 
-                    # Dynamically calculate engagement score (Active counts 100%, Idle counts 20%, Away counts 0%)
                     total_tracked = (
                         attendance_record.total_active_seconds +
                         attendance_record.total_idle_seconds +
@@ -161,7 +155,6 @@ async def session_websocket_endpoint(
                 if next_status:
                     current_tracked_status = next_status
 
-            # 3. Message loop
             while True:
                 data_text = await websocket.receive_text()
                 try:
