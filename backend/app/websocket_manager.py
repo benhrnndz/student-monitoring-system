@@ -38,7 +38,6 @@ class WebSocketRoomManager:
         self._ensure_room(session_id)
         self.rooms[session_id]["teachers"].append(websocket)
         
-        # Send initial roster snapshot to teacher
         roster = self.get_roster_snapshot(session_id)
         await websocket.send_text(json.dumps({
             "event": "teacher:roster_sync",
@@ -67,7 +66,6 @@ class WebSocketRoomManager:
             "lastActiveAt": int(datetime.now(timezone.utc).timestamp() * 1000)
         }
 
-        # Broadcast clean student joined / updated payload to teachers
         clean_student = self._serialize_student(self.rooms[session_id]["students"][student_id])
         await self.broadcast_to_teachers(session_id, {
             "event": "teacher:student_updated",
@@ -87,7 +85,6 @@ class WebSocketRoomManager:
             clean_student = self._serialize_student(student_data)
             clean_student["currentStatus"] = "DISCONNECTED"
             
-            # Notify teachers
             await self.broadcast_to_teachers(session_id, {
                 "event": "teacher:student_updated",
                 "sessionId": session_id,
@@ -117,7 +114,6 @@ class WebSocketRoomManager:
                     student["platform"] = "GOOGLE_MEET"
                     student["extensionActive"] = True
 
-            # Broadcast update to teachers
             clean_student = self._serialize_student(student)
             clean_student["reason"] = status_payload.get("reason", "")
             
