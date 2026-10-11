@@ -1,13 +1,12 @@
 from pydantic import BaseModel, EmailStr
-from typing import Optional, List, Dict, Any
+from typing import Optional, Dict, Any
 from datetime import datetime
 
-# --- Auth Schemas ---
 class UserRegister(BaseModel):
     email: EmailStr
     password: str
     full_name: str
-    role: str = "student" # "student" or "teacher"
+    role: str = "student"
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -18,7 +17,6 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     user: Dict[str, Any]
 
-# --- Classroom Schemas ---
 class ClassroomCreate(BaseModel):
     name: str
     subject: Optional[str] = None
@@ -37,7 +35,6 @@ class ClassroomResponse(BaseModel):
     class Config:
         from_attributes = True
 
-# --- Session Schemas ---
 class SessionCreate(BaseModel):
     classroom_id: str
     title: str
@@ -72,11 +69,4 @@ class SessionSummaryItem(BaseModel):
     avg_engagement: float
     duration_seconds: int
     duration_formatted: str
-
-# --- WebSocket Message Schemas ---
-class WSMessage(BaseModel):
-    event: str
-    sessionId: str
-    timestamp: int
-    payload: Dict[str, Any]
 
