@@ -1,6 +1,6 @@
 import random
 import string
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 from ..database import get_db
@@ -39,7 +39,6 @@ def get_classrooms(user_id: str, role: str = "student", db: Session = Depends(ge
     if role == "teacher":
         return db.query(Classroom).filter(Classroom.teacher_id == user_id).all()
     else:
-        # Enrolled classrooms for student
         enrollments = db.query(ClassroomEnrollment).filter(ClassroomEnrollment.student_id == user_id).all()
         classroom_ids = [e.classroom_id for e in enrollments]
         return db.query(Classroom).filter(Classroom.id.in_(classroom_ids)).all()
