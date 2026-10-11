@@ -1,10 +1,10 @@
 import csv
 import io
 import uuid
-from fastapi import APIRouter, Depends, HTTPException, status, Response
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone
-from typing import List, Dict, Any, Optional
+from typing import List, Optional
 from ..database import get_db
 from ..models import Session as SessionModel, Classroom, SessionAttendance, User
 from ..schemas import SessionCreate, SessionResponse, SessionStartRequest, SessionSummaryItem
@@ -32,6 +32,18 @@ def safe_duration_seconds(start: Optional[datetime], end: Optional[datetime], is
     e = end.replace(tzinfo=None) if end.tzinfo else end
     return max(0, int((e - s).total_seconds()))
 
+def calculate_engagement_score(att: SessionAttendance) -> float:
+    total = (
+        att.total_active_seconds +
+        att.total_idle_seconds +
+        att.total_tab_away_seconds +
+        att.total_window_away_seconds
+    )
+    if total <= 0:
+        return 100.0
+    score = ((att.total_active_seconds + 0.2 * att.total_idle_seconds) / total) * 100.0
+    return round(max(0.0, min(100.0, score)), 1)
+
 router = APIRouter(prefix="/api/sessions", tags=["sessions"])
 
 @router.get("/", response_model=List[SessionSummaryItem])
@@ -43,24 +55,13 @@ def get_all_sessions(db: Session = Depends(get_db)):
         classroom = db.query(Classroom).filter(Classroom.id == s.classroom_id).first()
         attendances = db.query(SessionAttendance).filter(SessionAttendance.session_id == s.id).all()
         
-        # Calculate duration safely
         start = s.start_time or s.created_at
         end = s.end_time
         duration_sec = safe_duration_seconds(start, end, is_live=(s.status == "live"))
 
-        # Calculate average engagement
         if attendances:
-            scores = []
-            for att in attendances:
-                tt = (
-                    att.total_active_seconds +
-                    att.total_idle_seconds +
-                    att.total_tab_away_seconds +
-                    att.total_window_away_seconds
-                )
-                score = ((att.total_active_seconds + 0.2 * att.total_idle_seconds) / tt * 100.0) if tt > 0 else 100.0
-                scores.append(score)
-            avg_eng = round(sum(scores) / len(scores), 1) if scores else 100.0
+            scores = [calculate_engagement_score(att) for att in attendances]
+            avg_eng = round(sum(scores) / len(scores), 1)
         else:
             avg_eng = 100.0
 
@@ -232,20 +233,7 @@ def get_session_report(session_id: str, db: Session = Depends(get_db)):
     results = []
     for att in attendances:
         student = db.query(User).filter(User.id == att.student_id).first()
-        total_time = (
-            att.total_active_seconds +
-            att.total_idle_seconds +
-            att.total_tab_away_seconds +
-            att.total_window_away_seconds
-        )
-        if total_time > 0:
-            computed_score = round(
-                ((att.total_active_seconds + 0.2 * att.total_idle_seconds) / total_time) * 100.0,
-                1
-            )
-            computed_score = max(0.0, min(100.0, computed_score))
-        else:
-            computed_score = 100.0
+        computed_score = calculate_engagement_score(att)
 
         results.append({
             "studentId": att.student_id,
@@ -319,20 +307,7 @@ def export_session_csv(session_id: str, db: Session = Depends(get_db)):
 
     for att in attendances:
         student = db.query(User).filter(User.id == att.student_id).first()
-        total_time = (
-            att.total_active_seconds +
-            att.total_idle_seconds +
-            att.total_tab_away_seconds +
-            att.total_window_away_seconds
-        )
-        if total_time > 0:
-            computed_score = round(
-                ((att.total_active_seconds + 0.2 * att.total_idle_seconds) / total_time) * 100.0,
-                1
-            )
-            computed_score = max(0.0, min(100.0, computed_score))
-        else:
-            computed_score = 100.0
+        computed_score = calculate_engagement_score(att)
 
         writer.writerow([
             student.full_name if student else "Unknown",
@@ -459,13 +434,7 @@ def export_session_excel(session_id: str, db: Session = Depends(get_db)):
     ws["E6"] = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
     ws["E6"].font = meta_val_font
 
-    # KPI summary cards
-    scores = []
-    for att in attendances:
-        tt = att.total_active_seconds + att.total_idle_seconds + att.total_tab_away_seconds + att.total_window_away_seconds
-        score = ((att.total_active_seconds + 0.2 * att.total_idle_seconds) / tt * 100.0) if tt > 0 else 100.0
-        scores.append(score)
-
+    scores = [calculate_engagement_score(att) for att in attendances]
     avg_engagement = round(sum(scores) / len(scores), 1) if scores else 100.0
 
     ws.merge_cells("G4:H4")
@@ -520,20 +489,7 @@ def export_session_excel(session_id: str, db: Session = Depends(get_db)):
     current_row = header_row_idx + 1
     for i, att in enumerate(attendances):
         student = db.query(User).filter(User.id == att.student_id).first()
-        total_time = (
-            att.total_active_seconds +
-            att.total_idle_seconds +
-            att.total_tab_away_seconds +
-            att.total_window_away_seconds
-        )
-        if total_time > 0:
-            computed_score = round(
-                ((att.total_active_seconds + 0.2 * att.total_idle_seconds) / total_time) * 100.0,
-                1
-            )
-            computed_score = max(0.0, min(100.0, computed_score))
-        else:
-            computed_score = 100.0
+        computed_score = calculate_engagement_score(att)
 
         row_fill = zebra_fill if (i % 2 == 1) else white_fill
         ws.row_dimensions[current_row].height = 20
