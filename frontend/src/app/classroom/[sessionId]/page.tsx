@@ -9,11 +9,8 @@ import {
   ShieldCheck, 
   Clock, 
   Bell, 
-  BookOpen, 
-  ExternalLink,
-  EyeOff
+  BookOpen
 } from "lucide-react";
-import Link from "next/link";
 import ThemeToggle from "@/components/ThemeToggle";
 
 export default function StudentClassroomPage({ params }: { params: Promise<{ sessionId: string }> }) {
@@ -41,9 +38,7 @@ export default function StudentClassroomPage({ params }: { params: Promise<{ ses
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   const [actualSessionId, setActualSessionId] = useState<string>(sessionId);
-  const [isWsConnected, setIsWsConnected] = useState<boolean>(false);
 
-  // If sessionId is generic "live-demo" or "demo", resolve the actual active session from backend
   useEffect(() => {
     if (sessionId === "live-demo" || sessionId === "demo") {
       fetch(`${WS_BASE.replace('/ws/session', '/api')}/sessions/active`)
@@ -58,15 +53,11 @@ export default function StudentClassroomPage({ params }: { params: Promise<{ ses
   }, [sessionId]);
 
   useEffect(() => {
-    // 1. Initialize WebSocket Connection
     const wsUrl = `${WS_BASE}/${actualSessionId}?role=student&user_id=${studentId}&user_name=${encodeURIComponent(studentName)}`;
     const ws = new WebSocket(wsUrl);
     socketRef.current = ws;
 
     ws.onopen = () => {
-      setIsWsConnected(true);
-
-      // Send initial heartbeat to register and sync with teacher dashboard
       ws.send(
         JSON.stringify({
           event: "telemetry:heartbeat",
@@ -81,7 +72,6 @@ export default function StudentClassroomPage({ params }: { params: Promise<{ ses
         })
       );
 
-      // Broadcast session details to extension for Google Meet cross-tab tracking
       window.postMessage(
         {
           type: "CLASSROOM_SESSION_SYNC",
@@ -92,10 +82,6 @@ export default function StudentClassroomPage({ params }: { params: Promise<{ ses
         },
         "*"
       );
-    };
-
-    ws.onclose = () => {
-      setIsWsConnected(false);
     };
 
     ws.onmessage = (event) => {
